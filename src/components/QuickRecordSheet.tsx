@@ -6,29 +6,30 @@ import {
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CATEGORIES, COLORS } from '../theme';
-import { CategoryId } from '../types';
+import { COLORS } from '../theme';
+import { ActivityItem, ActivityTag } from '../types';
 import { timeLabel } from '../dateUtils';
 
 interface Props {
   visible: boolean;
+  items: ActivityItem[];
+  tags: ActivityTag[];
   onClose: () => void;
-  onSubmit: (title: string, category: CategoryId) => void;
+  onSubmit: (item: ActivityItem) => void;
 }
 
-export default function QuickRecordSheet({ visible, onClose, onSubmit }: Props) {
+export default function QuickRecordSheet({ visible, items, tags, onClose, onSubmit }: Props) {
   const insets = useSafeAreaInsets();
-  const [title, setTitle] = useState('');
-  const [category, setCategory] = useState<CategoryId>('life');
   const [now, setNow] = useState(() => Date.now());
   const slide = useState(() => new Animated.Value(0))[0];
+  const activeItems = items.filter((item) => !item.archived);
 
   useEffect(() => {
     if (visible) {
@@ -43,21 +44,8 @@ export default function QuickRecordSheet({ visible, onClose, onSubmit }: Props) 
     }
   }, [visible, slide]);
 
-  const reset = () => {
-    setTitle('');
-    setCategory('life');
-  };
-
   const handleClose = () => {
-    reset();
     onClose();
-  };
-
-  const handleSubmit = () => {
-    const trimmed = title.trim();
-    if (!trimmed) return;
-    onSubmit(trimmed, category);
-    reset();
   };
 
   const translateY = slide.interpolate({
@@ -86,53 +74,39 @@ export default function QuickRecordSheet({ visible, onClose, onSubmit }: Props) 
 
             <View style={styles.headerBlock}>
               <Text style={styles.title}>记录此刻</Text>
-              <Text style={styles.subtitle}>{timeLabel(now)} · 刚刚</Text>
+              <Text style={styles.subtitle}>{timeLabel(now)} · 选择一件事</Text>
             </View>
 
-            <TextInput
-              style={styles.input}
-              placeholder="做了什么？"
-              placeholderTextColor={COLORS.muted3}
-              value={title}
-              onChangeText={setTitle}
-              multiline
-              autoFocus
-              maxLength={120}
-            />
-
-            <Text style={styles.sectionLabel}>选择分类</Text>
-            <View style={styles.chips}>
-              {CATEGORIES.map((c) => {
-                const active = c.id === category;
+            <Text style={styles.sectionLabel}>选择做了什么</Text>
+            {activeItems.length === 0 ? (
+              <View style={styles.empty}>
+                <Text style={styles.emptyTitle}>还没有可选的事情</Text>
+                <Text style={styles.emptyHint}>去设置里添加常做的事情后，就能在这里一键记录。</Text>
+              </View>
+            ) : (
+              <ScrollView
+                style={styles.itemScroll}
+                contentContainerStyle={styles.items}
+                showsVerticalScrollIndicator={false}
+              >
+                {activeItems.map((item) => {
+                  const tag = tags.find((candidate) => candidate.id === item.tagId) || tags[0];
                 return (
                   <Pressable
-                    key={c.id}
-                    onPress={() => setCategory(c.id)}
-                    style={[
-                      styles.chip,
-                      active && { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
-                    ]}
+                    key={item.id}
+                    onPress={() => onSubmit(item)}
+                    style={({ pressed }) => [styles.itemChip, pressed && styles.itemChipPressed]}
                   >
-                    {!active && <View style={[styles.chipDot, { backgroundColor: c.dot }]} />}
-                    <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                      {c.label}
+                    <View style={[styles.chipDot, { backgroundColor: tag?.dot || COLORS.accent }]} />
+                    <Text style={styles.itemTitle}>{item.title}</Text>
+                    <Text style={[styles.itemTag, { color: tag?.text || COLORS.accentInk }]}>
+                      {tag?.label || '标签'}
                     </Text>
                   </Pressable>
                 );
               })}
-            </View>
-
-            <Pressable
-              onPress={handleSubmit}
-              disabled={!title.trim()}
-              style={({ pressed }) => [
-                styles.submit,
-                !title.trim() && styles.submitDisabled,
-                pressed && title.trim() ? styles.submitPressed : null,
-              ]}
-            >
-              <Text style={styles.submitText}>记 下 来</Text>
-            </Pressable>
+              </ScrollView>
+            )}
           </Animated.View>
         </KeyboardAvoidingView>
       </View>
@@ -167,25 +141,15 @@ const styles = StyleSheet.create({
   headerBlock: { gap: 3 },
   title: { fontSize: 19, fontWeight: '800', color: COLORS.ink },
   subtitle: { fontSize: 12, fontWeight: '600', color: COLORS.muted3 },
-  input: {
-    backgroundColor: COLORS.inputBg,
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
-    minHeight: 70,
-    fontSize: 15,
-    fontWeight: '500',
-    color: COLORS.ink,
-    textAlignVertical: 'top',
-  },
   sectionLabel: {
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 1,
     color: COLORS.gold,
   },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: {
+  itemScroll: { maxHeight: 320 },
+  items: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingBottom: 4 },
+  itemChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
@@ -196,22 +160,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 999,
   },
+  itemChipPressed: { opacity: 0.58 },
   chipDot: { width: 7, height: 7, borderRadius: 999 },
-  chipText: { fontSize: 13, fontWeight: '700', color: COLORS.muted },
-  chipTextActive: { color: '#FFFFFF', fontWeight: '800' },
-  submit: {
-    marginTop: 3,
-    backgroundColor: COLORS.accent,
-    borderRadius: 16,
-    paddingVertical: 15,
-    alignItems: 'center',
-    shadowColor: COLORS.accent,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.42,
-    shadowRadius: 14,
-    elevation: 6,
-  },
-  submitPressed: { opacity: 0.9, transform: [{ scale: 0.99 }] },
-  submitDisabled: { opacity: 0.45, shadowOpacity: 0 },
-  submitText: { fontSize: 15, fontWeight: '800', color: '#FFFFFF', letterSpacing: 3 },
+  itemTitle: { fontSize: 13, fontWeight: '800', color: COLORS.ink },
+  itemTag: { fontSize: 11, fontWeight: '800' },
+  empty: { backgroundColor: COLORS.inputBg, borderRadius: 16, padding: 16, gap: 6 },
+  emptyTitle: { fontSize: 14, fontWeight: '800', color: COLORS.ink },
+  emptyHint: { fontSize: 12, color: COLORS.muted3, lineHeight: 18 },
 });

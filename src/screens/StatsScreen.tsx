@@ -2,18 +2,19 @@ import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CATEGORY_MAP, COLORS, HEAT_LEGEND, heatColor } from '../theme';
-import { Activity } from '../types';
+import { Activity, ActivityTag } from '../types';
 import { cnMonth, daysInMonth, mondayFirstIndex } from '../dateUtils';
 
 interface Props {
   title: string;
   activities: Activity[];
+  tags: ActivityTag[];
   onBack: () => void;
 }
 
 const WEEK = ['一', '二', '三', '四', '五', '六', '日'];
 
-export default function StatsScreen({ title, activities, onBack }: Props) {
+export default function StatsScreen({ title, activities, tags, onBack }: Props) {
   const insets = useSafeAreaInsets();
   const now = useMemo(() => new Date(), []);
   const [year, setYear] = useState(now.getFullYear());
@@ -30,8 +31,10 @@ export default function StatsScreen({ title, activities, onBack }: Props) {
       (acc, a) => (!acc || a.timestamp > acc.timestamp ? a : acc),
       null,
     );
-    return latest ? CATEGORY_MAP[latest.category] : CATEGORY_MAP.life;
-  }, [matching]);
+    return latest
+      ? tags.find((tag) => tag.id === (latest.tagId || latest.category)) || CATEGORY_MAP[latest.category]
+      : CATEGORY_MAP.life;
+  }, [matching, tags]);
 
   // Per-day counts for the displayed month.
   const { counts, total, activeDays } = useMemo(() => {
@@ -97,7 +100,7 @@ export default function StatsScreen({ title, activities, onBack }: Props) {
             <Text style={styles.headerTitle} numberOfLines={1}>
               {title}
             </Text>
-            <View style={[styles.headerTag, { backgroundColor: COLORS.accentSoft }]}>
+            <View style={[styles.headerTag, { backgroundColor: category.soft || COLORS.accentSoft }]}>
               <Text style={[styles.headerTagText, { color: category.text }]}>{category.label}</Text>
             </View>
           </View>

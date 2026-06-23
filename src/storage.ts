@@ -1,8 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Activity, CategoryId } from './types';
+import { DEFAULT_TAGS } from './theme';
+import { Activity, ActivityItem, ActivityOverviewStyle, ActivityTag, CategoryId } from './types';
 
 const KEY = 'dal.activities.v1';
 const SEED_FLAG = 'dal.seeded.v1';
+const OVERVIEW_STYLE_KEY = 'dal.activityOverviewStyle.v1';
+const TAGS_KEY = 'dal.tags.v1';
+const ITEMS_KEY = 'dal.activityItems.v1';
 
 export async function loadActivities(): Promise<Activity[]> {
   try {
@@ -26,6 +30,57 @@ export async function saveActivities(list: Activity[]): Promise<void> {
   await AsyncStorage.setItem(KEY, JSON.stringify(list));
 }
 
+export async function loadTags(): Promise<ActivityTag[]> {
+  try {
+    const raw = await AsyncStorage.getItem(TAGS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as ActivityTag[];
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {
+    // fall through to defaults
+  }
+  const tags = DEFAULT_TAGS;
+  await saveTags(tags);
+  return tags;
+}
+
+export async function saveTags(list: ActivityTag[]): Promise<void> {
+  await AsyncStorage.setItem(TAGS_KEY, JSON.stringify(list));
+}
+
+export async function loadActivityItems(activities: Activity[]): Promise<ActivityItem[]> {
+  try {
+    const raw = await AsyncStorage.getItem(ITEMS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as ActivityItem[];
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {
+    // fall through to derived items
+  }
+  const items = buildItemsFromActivities(activities);
+  await saveActivityItems(items);
+  return items;
+}
+
+export async function saveActivityItems(list: ActivityItem[]): Promise<void> {
+  await AsyncStorage.setItem(ITEMS_KEY, JSON.stringify(list));
+}
+
+export async function loadActivityOverviewStyle(): Promise<ActivityOverviewStyle> {
+  try {
+    const raw = await AsyncStorage.getItem(OVERVIEW_STYLE_KEY);
+    return raw === 'cloud' || raw === 'rank' ? raw : 'rank';
+  } catch (e) {
+    return 'rank';
+  }
+}
+
+export async function saveActivityOverviewStyle(style: ActivityOverviewStyle): Promise<void> {
+  await AsyncStorage.setItem(OVERVIEW_STYLE_KEY, style);
+}
+
 let counter = 0;
 function newId(): string {
   counter += 1;
@@ -42,7 +97,33 @@ function push(
   category: CategoryId,
   ts: number,
 ) {
-  list.push({ id: newId(), title, category, timestamp: ts });
+  list.push({ id: newId(), title, category, tagId: category, timestamp: ts });
+}
+
+function buildItemsFromActivities(activities: Activity[]): ActivityItem[] {
+  const map = new Map<string, ActivityItem>();
+
+  for (const activity of activities) {
+    const key = `${activity.title}::${activity.tagId || activity.category}`;
+    if (map.has(key)) continue;
+    map.set(key, {
+      id: `item-${slug(activity.title)}-${activity.tagId || activity.category}`,
+      title: activity.title,
+      tagId: activity.tagId || activity.category,
+      createdAt: activity.timestamp,
+    });
+  }
+
+  return [...map.values()].sort((a, b) => a.createdAt - b.createdAt);
+}
+
+function slug(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9\u4e00-\u9fa5-]/g, '')
+    .slice(0, 24) || Date.now().toString(36);
 }
 
 /**

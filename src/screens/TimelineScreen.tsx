@@ -8,16 +8,26 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CATEGORY_MAP, COLORS } from '../theme';
-import { Activity } from '../types';
+import { Activity, ActivityTag } from '../types';
 import { encouragementFor, isSameDay, longDateLabel, timeLabel } from '../dateUtils';
 
 interface Props {
   activities: Activity[];
+  tags: ActivityTag[];
   onOpenStats: (title: string) => void;
+  onOpenAllActivities: () => void;
+  onOpenSettings: () => void;
   onOpenRecord: () => void;
 }
 
-export default function TimelineScreen({ activities, onOpenStats, onOpenRecord }: Props) {
+export default function TimelineScreen({
+  activities,
+  tags,
+  onOpenStats,
+  onOpenAllActivities,
+  onOpenSettings,
+  onOpenRecord,
+}: Props) {
   const insets = useSafeAreaInsets();
   const today = useMemo(() => new Date(), []);
 
@@ -42,7 +52,23 @@ export default function TimelineScreen({ activities, onOpenStats, onOpenRecord }
             <Text style={styles.dateLabel}>{longDateLabel(today)}</Text>
             <Text style={styles.encourage}>{encouragementFor(today)}</Text>
           </View>
+          <Pressable onPress={onOpenSettings} style={styles.iconButton} hitSlop={10}>
+            <Text style={styles.iconButtonText}>···</Text>
+          </Pressable>
         </View>
+
+        <Pressable
+          onPress={onOpenAllActivities}
+          style={({ pressed }) => [styles.overviewCard, pressed && styles.rowPressed]}
+        >
+          <View>
+            <Text style={styles.overviewTitle}>全部活动</Text>
+            <Text style={styles.overviewSubtitle}>
+              {activities.length} 次记录 · 点击查看所有活动
+            </Text>
+          </View>
+          <Text style={styles.overviewArrow}>›</Text>
+        </Pressable>
 
         {/* Section divider */}
         <View style={styles.sectionRow}>
@@ -60,7 +86,7 @@ export default function TimelineScreen({ activities, onOpenStats, onOpenRecord }
           <View style={styles.timeline}>
             <View style={styles.rail} />
             {todays.map((a) => {
-              const cat = CATEGORY_MAP[a.category];
+              const cat = tags.find((tag) => tag.id === (a.tagId || a.category)) || CATEGORY_MAP[a.category];
               return (
                 <Pressable
                   key={a.id}
@@ -109,7 +135,41 @@ const styles = StyleSheet.create({
   headerText: { paddingTop: 6, gap: 5, flex: 1 },
   dateLabel: { fontSize: 14, fontWeight: '800', color: COLORS.ink, letterSpacing: 0.5 },
   encourage: { fontSize: 13, color: COLORS.muted2, fontWeight: '500', lineHeight: 19 },
-  sectionRow: { flexDirection: 'row', alignItems: 'center', gap: 9, marginTop: 26 },
+  iconButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 999,
+    backgroundColor: COLORS.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  iconButtonText: {
+    color: COLORS.muted,
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: -1,
+    marginTop: -8,
+  },
+  overviewCard: {
+    marginTop: 18,
+    backgroundColor: COLORS.card,
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: COLORS.ink,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 2,
+  },
+  overviewTitle: { fontSize: 16, fontWeight: '800', color: COLORS.ink },
+  overviewSubtitle: { marginTop: 3, fontSize: 11.5, fontWeight: '600', color: COLORS.muted3 },
+  overviewArrow: { fontSize: 20, fontWeight: '700', color: COLORS.gold },
+  sectionRow: { flexDirection: 'row', alignItems: 'center', gap: 9, marginTop: 22 },
   sectionTitle: { fontSize: 11, fontWeight: '800', letterSpacing: 3, color: COLORS.gold },
   sectionLine: { flex: 1, height: 1, backgroundColor: COLORS.divider },
   sectionCount: { fontSize: 11, color: COLORS.gold, fontWeight: '700' },

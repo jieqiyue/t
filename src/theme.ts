@@ -33,12 +33,14 @@ export interface Category {
   soft: string;
 }
 
-export const CATEGORIES: Category[] = [
+export const DEFAULT_TAGS: Category[] = [
   { id: 'work', label: '工作', dot: '#9FB0BE', text: '#5E7080', soft: '#E7ECEF' },
   { id: 'life', label: '生活', dot: '#A8B5A2', text: '#5E7257', soft: '#E9EEE6' },
   { id: 'sport', label: '运动', dot: '#C9A9A0', text: '#9B6E64', soft: '#F1E7E4' },
   { id: 'fun', label: '娱乐', dot: '#C2B49C', text: '#897B5E', soft: '#EFEBE2' },
 ];
+
+export const CATEGORIES: Category[] = DEFAULT_TAGS;
 
 /** Fixed display order for category summaries (matches the reference design). */
 export const CATEGORY_ORDER: CategoryId[] = ['life', 'work', 'fun', 'sport'];
