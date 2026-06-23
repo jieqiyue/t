@@ -31,12 +31,12 @@ export default function ManageTagsScreen({ tags, items, onChangeTags, onBack }: 
     if (!trimmed) return;
     const palette = PALETTE[paletteIndex];
     onChangeTags([
-      ...tags,
       {
         id: `tag-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6)}`,
         label: trimmed,
         ...palette,
       },
+      ...tags,
     ]);
     setLabel('');
   };
@@ -62,8 +62,8 @@ export default function ManageTagsScreen({ tags, items, onChangeTags, onBack }: 
           <Text style={styles.backIcon}>‹</Text>
         </Pressable>
         <View style={styles.titleBlock}>
-          <Text style={styles.title}>管理标签</Text>
-          <Text style={styles.subtitle}>标签决定事情的分类和颜色</Text>
+          <Text style={styles.title}>标签管理</Text>
+          <Text style={styles.subtitle}>标签决定事件的分类和颜色</Text>
         </View>
       </View>
 

@@ -39,19 +39,19 @@ export default function SettingsScreen({
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>记录配置</Text>
+        <Text style={styles.sectionTitle}>记录设置</Text>
         <View style={styles.optionCard}>
           <Pressable onPress={onOpenManageItems} style={styles.navOption}>
             <View style={styles.optionText}>
-              <Text style={styles.optionTitle}>管理事情</Text>
-              <Text style={styles.optionDesc}>添加、归档或删除快捷记录里可选择的事情。</Text>
+              <Text style={styles.optionTitle}>事件管理</Text>
+              <Text style={styles.optionDesc}>添加、归档或删除快捷记录里可选择的事件。</Text>
             </View>
             <Text style={styles.navArrow}>›</Text>
           </Pressable>
           <Pressable onPress={onOpenManageTags} style={[styles.navOption, styles.optionLast]}>
             <View style={styles.optionText}>
-              <Text style={styles.optionTitle}>管理标签</Text>
-              <Text style={styles.optionDesc}>维护事情所属的标签和显示颜色。</Text>
+              <Text style={styles.optionTitle}>标签管理</Text>
+              <Text style={styles.optionDesc}>维护事件所属的标签和显示颜色。</Text>
             </View>
             <Text style={styles.navArrow}>›</Text>
           </Pressable>

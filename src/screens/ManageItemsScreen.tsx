@@ -16,7 +16,10 @@ export default function ManageItemsScreen({ items, tags, onChangeItems, onBack }
   const [title, setTitle] = useState('');
   const [tagId, setTagId] = useState(() => tags[0]?.id || 'life');
   const visibleItems = useMemo(
-    () => [...items].sort((a, b) => Number(a.archived) - Number(b.archived) || b.createdAt - a.createdAt),
+    () => [
+      ...items.filter((item) => !item.archived),
+      ...items.filter((item) => item.archived),
+    ],
     [items],
   );
 
@@ -48,8 +51,8 @@ export default function ManageItemsScreen({ items, tags, onChangeItems, onBack }
           <Text style={styles.backIcon}>‹</Text>
         </Pressable>
         <View style={styles.titleBlock}>
-          <Text style={styles.title}>管理事情</Text>
-          <Text style={styles.subtitle}>维护快捷记录里可直接选择的事情</Text>
+          <Text style={styles.title}>事件管理</Text>
+          <Text style={styles.subtitle}>维护快捷记录里可直接选择的事件</Text>
         </View>
       </View>
 
@@ -62,7 +65,7 @@ export default function ManageItemsScreen({ items, tags, onChangeItems, onBack }
             style={styles.input}
             value={title}
             onChangeText={setTitle}
-            placeholder="新增一件常做的事"
+            placeholder="新增一个常做事件"
             placeholderTextColor={COLORS.muted3}
             maxLength={40}
           />
@@ -86,7 +89,7 @@ export default function ManageItemsScreen({ items, tags, onChangeItems, onBack }
             disabled={!title.trim()}
             style={[styles.primaryButton, !title.trim() && styles.disabled]}
           >
-            <Text style={styles.primaryText}>添加事情</Text>
+            <Text style={styles.primaryText}>添加事件</Text>
           </Pressable>
         </View>
 
