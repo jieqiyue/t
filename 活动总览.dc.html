@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+</style>
+</helmet>
+
+<div style="width:max-content;min-width:100%;min-height:100vh;box-sizing:border-box;padding:48px;background:#E7E3DA;font-family:'Nunito','Noto Sans SC',-apple-system,sans-serif">
+
+  <div style="max-width:680px;margin:0 auto 30px">
+    <div style="font-size:12px;font-weight:800;letter-spacing:.22em;color:#B3A998;margin-bottom:8px">DAILY ACTIVITY LOG · 活动总览</div>
+    <h1 style="margin:0 0 8px;font-size:30px;font-weight:800;color:#4A4540;letter-spacing:-.01em">一眼看全所有活动</h1>
+    <p style="margin:0;font-size:14px;color:#8C8275;font-weight:500">入口在 Timeline → 「全部活动」。每项活动按累计次数排布，点任意一项进入它的日历热力图。两种直观视图供选择。</p>
+  </div>
+
+  <div style="display:flex;gap:36px;align-items:flex-start;margin:0 auto;max-width:680px">
+
+    <!-- 视图 1 · 频次榜 -->
+    <div style="display:flex;flex-direction:column;gap:13px;flex:none">
+      <span style="font-size:12px;font-weight:700;color:#9A9081;letter-spacing:.03em;padding-left:8px">视图 A · 频次榜</span>
+      <div style="width:300px;height:624px;background:#F6F3EC;border-radius:42px;box-shadow:0 22px 50px rgba(74,69,64,.16),0 6px 16px rgba(74,69,64,.06);overflow:hidden;position:relative;display:flex;flex-direction:column;flex:none;border:6px solid #fff;outline:1px solid rgba(120,110,100,.1)">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 22px 4px;flex:none">
+          <span style="font-size:13px;font-weight:800;color:#4A4540">9:41</span>
+          <div style="display:flex;align-items:center;gap:6px">
+            <div style="display:flex;align-items:flex-end;gap:1.5px;height:9px"><div style="width:2.5px;height:4px;background:#4A4540;border-radius:1px"></div><div style="width:2.5px;height:6px;background:#4A4540;border-radius:1px"></div><div style="width:2.5px;height:8px;background:#4A4540;border-radius:1px"></div><div style="width:2.5px;height:9px;background:#4A4540;border-radius:1px"></div></div>
+            <div style="width:18px;height:9px;border:1px solid rgba(74,69,64,.5);border-radius:2px;padding:1px"><div style="width:70%;height:100%;background:#4A4540;border-radius:1px"></div></div>
+          </div>
+        </div>
+        <div style="flex:1;overflow:hidden;padding:8px 20px 0;display:flex;flex-direction:column;gap:13px">
+          <div style="display:flex;align-items:center;gap:10px;padding-top:2px">
+            <div style="width:30px;height:30px;border-radius:50%;background:#fff;box-shadow:0 2px 8px rgba(74,69,64,.06);display:flex;align-items:center;justify-content:center;flex:none"><span style="font-size:17px;color:#8C8275;margin-top:-2px">‹</span></div>
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <span style="font-size:20px;font-weight:800;color:#4A4540;line-height:1.1">全部活动</span>
+              <span style="font-size:11px;font-weight:600;color:#A89D8E">9 项 · 累计 255 次</span>
+            </div>
+          </div>
+          <div style="display:flex;gap:7px">
+            <span style="font-size:11.5px;font-weight:800;padding:6px 13px;border-radius:999px;background:#4A4540;color:#fff">全部</span>
+            <span style="font-size:11.5px;font-weight:700;padding:6px 12px;border-radius:999px;background:#fff;color:#8C8275;border:1px solid #ECE6DC">工作</span>
+            <span style="font-size:11.5px;font-weight:700;padding:6px 12px;border-radius:999px;background:#fff;color:#8C8275;border:1px solid #ECE6DC">生活</span>
+            <span style="font-size:11.5px;font-weight:700;padding:6px 12px;border-radius:999px;background:#fff;color:#8C8275;border:1px solid #ECE6DC">运动</span>
+          </div>
+          <div style="background:#fff;border-radius:18px;padding:4px 15px;box-shadow:0 3px 12px rgba(74,69,64,.05)">
+            <div style="padding:11px 0;border-bottom:1px solid #F2EEE5;display:flex;flex-direction:column;gap:7px">
+              <div style="display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:#9FB0BE"></span><span style="font-size:13.5px;font-weight:700;color:#4A4540">番茄钟</span></div><span style="font-size:13px;font-weight:800;color:#4A4540">88<span style="font-size:10px;font-weight:600;color:#B3A998"> 次</span></span></div>
+              <div style="height:7px;border-radius:4px;background:#ECE6DC;overflow:hidden"><div style="height:100%;width:100%;border-radius:4px;background:#9FB0BE"></div></div>
+            </div>
+            <div style="padding:11px 0;border-bottom:1px solid #F2EEE5;display:flex;flex-direction:column;gap:7px">
+              <div style="display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:#A8B5A2"></span><span style="font-size:13.5px;font-weight:700;color:#4A4540">喝水</span></div><span style="font-size:13px;font-weight:800;color:#4A4540">84<span style="font-size:10px;font-weight:600;color:#B3A998"> 次</span></span></div>
+              <div style="height:7px;border-radius:4px;background:#ECE6DC;overflow:hidden"><div style="height:100%;width:95%;border-radius:4px;background:#A8B5A2"></div></div>
+            </div>
+            <div style="padding:11px 0;border-bottom:1px solid #F2EEE5;display:flex;flex-direction:column;gap:7px">
+              <div style="display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:#A8B5A2"></span><span style="font-size:13.5px;font-weight:700;color:#4A4540">早睡</span></div><span style="font-size:13px;font-weight:800;color:#4A4540">19<span style="font-size:10px;font-weight:600;color:#B3A998"> 次</span></span></div>
+              <div style="height:7px;border-radius:4px;background:#ECE6DC;overflow:hidden"><div style="height:100%;width:22%;border-radius:4px;background:#A8B5A2"></div></div>
+            </div>
+            <div style="padding:11px 0;border-bottom:1px solid #F2EEE5;display:flex;flex-direction:column;gap:7px">
+              <div style="display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:#C9A9A0"></span><span style="font-size:13.5px;font-weight:700;color:#4A4540">晨跑</span></div><span style="font-size:13px;font-weight:800;color:#4A4540">16<span style="font-size:10px;font-weight:600;color:#B3A998"> 次</span></span></div>
+              <div style="height:7px;border-radius:4px;background:#ECE6DC;overflow:hidden"><div style="height:100%;width:18%;border-radius:4px;background:#C9A9A0"></div></div>
+            </div>
+            <div style="padding:11px 0;border-bottom:1px solid #F2EEE5;display:flex;flex-direction:column;gap:7px">
+              <div style="display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:#C2B49C"></span><span style="font-size:13.5px;font-weight:700;color:#4A4540">读书</span></div><span style="font-size:13px;font-weight:800;color:#4A4540">14<span style="font-size:10px;font-weight:600;color:#B3A998"> 次</span></span></div>
+              <div style="height:7px;border-radius:4px;background:#ECE6DC;overflow:hidden"><div style="height:100%;width:16%;border-radius:4px;background:#C2B49C"></div></div>
+            </div>
+            <div style="padding:11px 0;border-bottom:1px solid #F2EEE5;display:flex;flex-direction:column;gap:7px">
+              <div style="display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:#9FB0BE"></span><span style="font-size:13.5px;font-weight:700;color:#4A4540">开会</span></div><span style="font-size:13px;font-weight:800;color:#4A4540">11<span style="font-size:10px;font-weight:600;color:#B3A998"> 次</span></span></div>
+              <div style="height:7px;border-radius:4px;background:#ECE6DC;overflow:hidden"><div style="height:100%;width:13%;border-radius:4px;background:#9FB0BE"></div></div>
+            </div>
+            <div style="padding:11px 0;border-bottom:1px solid #F2EEE5;display:flex;flex-direction:column;gap:7px">
+              <div style="display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:#C9A9A0"></span><span style="font-size:13.5px;font-weight:700;color:#4A4540">健身</span></div><span style="font-size:13px;font-weight:800;color:#4A4540">9<span style="font-size:10px;font-weight:600;color:#B3A998"> 次</span></span></div>
+              <div style="height:7px;border-radius:4px;background:#ECE6DC;overflow:hidden"><div style="height:100%;width:10%;border-radius:4px;background:#C9A9A0"></div></div>
+            </div>
+            <div style="padding:11px 0;display:flex;flex-direction:column;gap:7px">
+              <div style="display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:#C2B49C"></span><span style="font-size:13.5px;font-weight:700;color:#4A4540">看电影</span></div><span style="font-size:13px;font-weight:800;color:#4A4540">6<span style="font-size:10px;font-weight:600;color:#B3A998"> 次</span></span></div>
+              <div style="height:7px;border-radius:4px;background:#ECE6DC;overflow:hidden"><div style="height:100%;width:9%;border-radius:4px;background:#C2B49C"></div></div>
+            </div>
+          </div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:0;height:60px;background:linear-gradient(transparent,#F6F3EC);pointer-events:none"></div>
+        <div style="position:absolute;bottom:9px;left:50%;transform:translateX(-50%);width:108px;height:4px;border-radius:999px;background:rgba(74,69,64,.16)"></div>
+      </div>
+    </div>
+
+    <!-- 视图 2 · 活动云 -->
+    <div style="display:flex;flex-direction:column;gap:13px;flex:none">
+      <span style="font-size:12px;font-weight:700;color:#9A9081;letter-spacing:.03em;padding-left:8px">视图 B · 活动云</span>
+      <div style="width:300px;height:624px;background:#F6F3EC;border-radius:42px;box-shadow:0 22px 50px rgba(74,69,64,.16),0 6px 16px rgba(74,69,64,.06);overflow:hidden;position:relative;display:flex;flex-direction:column;flex:none;border:6px solid #fff;outline:1px solid rgba(120,110,100,.1)">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 22px 4px;flex:none">
+          <span style="font-size:13px;font-weight:800;color:#4A4540">9:41</span>
+          <div style="display:flex;align-items:center;gap:6px">
+            <div style="display:flex;align-items:flex-end;gap:1.5px;height:9px"><div style="width:2.5px;height:4px;background:#4A4540;border-radius:1px"></div><div style="width:2.5px;height:6px;background:#4A4540;border-radius:1px"></div><div style="width:2.5px;height:8px;background:#4A4540;border-radius:1px"></div><div style="width:2.5px;height:9px;background:#4A4540;border-radius:1px"></div></div>
+            <div style="width:18px;height:9px;border:1px solid rgba(74,69,64,.5);border-radius:2px;padding:1px"><div style="width:70%;height:100%;background:#4A4540;border-radius:1px"></div></div>
+          </div>
+        </div>
+        <div style="flex:1;overflow:hidden;padding:8px 20px 0;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;align-items:center;gap:10px;padding-top:2px">
+            <div style="width:30px;height:30px;border-radius:50%;background:#fff;box-shadow:0 2px 8px rgba(74,69,64,.06);display:flex;align-items:center;justify-content:center;flex:none"><span style="font-size:17px;color:#8C8275;margin-top:-2px">‹</span></div>
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <span style="font-size:20px;font-weight:800;color:#4A4540;line-height:1.1">全部活动</span>
+              <span style="font-size:11px;font-weight:600;color:#A89D8E">圆点越大，做得越多</span>
+            </div>
+          </div>
+          <div style="display:flex;background:#EEE8DE;border-radius:12px;padding:3px;gap:2px">
+            <span style="flex:1;text-align:center;font-size:12px;font-weight:800;padding:7px 0;border-radius:9px;background:#fff;color:#4A4540;box-shadow:0 1px 4px rgba(74,69,64,.08)">按频次</span>
+            <span style="flex:1;text-align:center;font-size:12px;font-weight:700;padding:7px 0;border-radius:9px;color:#9A9081">按分类</span>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:9px;align-content:flex-start;align-items:center">
+            <span style="display:inline-flex;align-items:baseline;gap:5px;background:#E7ECEF;color:#5E7080;border-radius:16px;padding:11px 17px;font-weight:800;font-size:26px;line-height:1">番茄钟<span style="font-size:14px;font-weight:700;opacity:.75">88</span></span>
+            <span style="display:inline-flex;align-items:baseline;gap:5px;background:#E9EEE6;color:#5E7257;border-radius:16px;padding:10px 16px;font-weight:800;font-size:25px;line-height:1">喝水<span style="font-size:14px;font-weight:700;opacity:.75">84</span></span>
+            <span style="display:inline-flex;align-items:baseline;gap:4px;background:#E9EEE6;color:#5E7257;border-radius:13px;padding:8px 13px;font-weight:800;font-size:16px;line-height:1">早睡<span style="font-size:11px;font-weight:700;opacity:.7">19</span></span>
+            <span style="display:inline-flex;align-items:baseline;gap:4px;background:#F1E7E4;color:#9B6E64;border-radius:13px;padding:8px 13px;font-weight:800;font-size:15px;line-height:1">晨跑<span style="font-size:11px;font-weight:700;opacity:.7">16</span></span>
+            <span style="display:inline-flex;align-items:baseline;gap:4px;background:#EFEBE2;color:#897B5E;border-radius:13px;padding:8px 13px;font-weight:800;font-size:15px;line-height:1">读书<span style="font-size:11px;font-weight:700;opacity:.7">14</span></span>
+            <span style="display:inline-flex;align-items:baseline;gap:4px;background:#E7ECEF;color:#5E7080;border-radius:12px;padding:7px 12px;font-weight:800;font-size:15px;line-height:1">开会<span style="font-size:10px;font-weight:700;opacity:.7">11</span></span>
+            <span style="display:inline-flex;align-items:baseline;gap:4px;background:#F1E7E4;color:#9B6E64;border-radius:12px;padding:7px 12px;font-weight:800;font-size:14px;line-height:1">健身<span style="font-size:10px;font-weight:700;opacity:.7">9</span></span>
+            <span style="display:inline-flex;align-items:baseline;gap:4px;background:#EFEBE2;color:#897B5E;border-radius:12px;padding:7px 12px;font-weight:800;font-size:14px;line-height:1">游戏<span style="font-size:10px;font-weight:700;opacity:.7">8</span></span>
+            <span style="display:inline-flex;align-items:baseline;gap:4px;background:#EFEBE2;color:#897B5E;border-radius:12px;padding:7px 12px;font-weight:800;font-size:14px;line-height:1">看电影<span style="font-size:10px;font-weight:700;opacity:.7">6</span></span>
+          </div>
+          <div style="margin-top:auto;margin-bottom:20px;background:#fff;border-radius:16px;padding:13px 15px;box-shadow:0 3px 12px rgba(74,69,64,.05);display:flex;flex-direction:column;gap:10px">
+            <span style="font-size:10.5px;font-weight:800;letter-spacing:.12em;color:#B3A998">各分类累计</span>
+            <div style="display:flex;justify-content:space-between">
+              <div style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:#A8B5A2"></span><span style="font-size:12px;font-weight:700;color:#4A4540">生活</span><span style="font-size:12px;font-weight:800;color:#5E7257">103</span></div>
+              <div style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:#9FB0BE"></span><span style="font-size:12px;font-weight:700;color:#4A4540">工作</span><span style="font-size:12px;font-weight:800;color:#5E7080">99</span></div>
+            </div>
+            <div style="display:flex;justify-content:space-between">
+              <div style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:#C2B49C"></span><span style="font-size:12px;font-weight:700;color:#4A4540">娱乐</span><span style="font-size:12px;font-weight:800;color:#897B5E">28</span></div>
+              <div style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:#C9A9A0"></span><span style="font-size:12px;font-weight:700;color:#4A4540">运动</span><span style="font-size:12px;font-weight:800;color:#9B6E64">25</span></div>
+            </div>
+          </div>
+        </div>
+        <div style="position:absolute;bottom:9px;left:50%;transform:translateX(-50%);width:108px;height:4px;border-radius:999px;background:rgba(74,69,64,.16)"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
