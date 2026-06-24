@@ -21,6 +21,7 @@ interface ActivitySummary {
 }
 
 type TagFilter = 'all' | ActivityTag['id'];
+type CloudMode = 'frequency' | 'category';
 
 export default function AllActivitiesScreen({
   activities,
@@ -32,6 +33,7 @@ export default function AllActivitiesScreen({
 }: Props) {
   const insets = useSafeAreaInsets();
   const [filter, setFilter] = useState<TagFilter>('all');
+  const [cloudMode, setCloudMode] = useState<CloudMode>('frequency');
 
   const summaries = useMemo(() => buildSummaries(activities), [activities]);
   const filtered = useMemo(
@@ -77,14 +79,33 @@ export default function AllActivitiesScreen({
         ) : (
           <>
             <View style={styles.segmented}>
-              <View style={styles.segmentActive}>
-                <Text style={styles.segmentActiveText}>按频次</Text>
-              </View>
-              <View style={styles.segment}>
-                <Text style={styles.segmentText}>按分类</Text>
-              </View>
+              <Pressable
+                onPress={() => setCloudMode('frequency')}
+                style={cloudMode === 'frequency' ? styles.segmentActive : styles.segment}
+              >
+                <Text style={cloudMode === 'frequency' ? styles.segmentActiveText : styles.segmentText}>
+                  按频次
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setCloudMode('category')}
+                style={cloudMode === 'category' ? styles.segmentActive : styles.segment}
+              >
+                <Text style={cloudMode === 'category' ? styles.segmentActiveText : styles.segmentText}>
+                  按分类
+                </Text>
+              </Pressable>
             </View>
-            <CloudOverview items={filtered} tags={tags} maxCount={maxCount} onOpenStats={onOpenStats} />
+            {cloudMode === 'frequency' ? (
+              <CloudOverview items={filtered} tags={tags} maxCount={maxCount} onOpenStats={onOpenStats} />
+            ) : (
+              <CloudByCategoryOverview
+                items={filtered}
+                tags={tags}
+                maxCount={maxCount}
+                onOpenStats={onOpenStats}
+              />
+            )}
             <CategoryTotals tags={tags} totals={categoryTotals} />
           </>
         )}
@@ -265,6 +286,52 @@ function CloudOverview({
   );
 }
 
+function CloudByCategoryOverview({
+  items,
+  tags,
+  maxCount,
+  onOpenStats,
+}: {
+  items: ActivitySummary[];
+  tags: ActivityTag[];
+  maxCount: number;
+  onOpenStats: (title: string) => void;
+}) {
+  if (items.length === 0) return <EmptyState />;
+
+  const groups = tags
+    .map((tag) => ({
+      tag,
+      items: items.filter((item) => item.tagId === tag.id),
+    }))
+    .filter((group) => group.items.length > 0);
+
+  return (
+    <View style={styles.categoryCloud}>
+      {groups.map((group) => {
+        const total = group.items.reduce((sum, item) => sum + item.count, 0);
+        return (
+          <View key={group.tag.id} style={styles.categoryGroup}>
+            <View style={styles.categoryHead}>
+              <View style={styles.categoryName}>
+                <View style={[styles.smallDot, { backgroundColor: group.tag.dot }]} />
+                <Text style={styles.categoryTitle}>{group.tag.label}</Text>
+              </View>
+              <Text style={[styles.categoryCount, { color: group.tag.text }]}>{total} 次</Text>
+            </View>
+            <CloudOverview
+              items={group.items}
+              tags={tags}
+              maxCount={maxCount}
+              onOpenStats={onOpenStats}
+            />
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
 function CategoryTotals({ tags, totals }: { tags: ActivityTag[]; totals: Record<string, number> }) {
   return (
     <View style={styles.totalCard}>
@@ -398,6 +465,23 @@ const styles = StyleSheet.create({
     gap: 9,
     marginTop: 14,
   },
+  categoryCloud: { marginTop: 14, gap: 14 },
+  categoryGroup: {
+    borderRadius: 16,
+    backgroundColor: COLORS.card,
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 14,
+    shadowColor: COLORS.ink,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 1,
+  },
+  categoryHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  categoryName: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  categoryTitle: { fontSize: 13, fontWeight: '800', color: COLORS.ink },
+  categoryCount: { fontSize: 12, fontWeight: '800' },
   cloudPill: { flexDirection: 'row', alignItems: 'baseline', gap: 5 },
   cloudText: { fontWeight: '800', lineHeight: 28 },
   cloudCount: { fontWeight: '700', opacity: 0.75 },

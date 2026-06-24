@@ -15,6 +15,7 @@ export default function ManageItemsScreen({ items, tags, onChangeItems, onBack }
   const insets = useSafeAreaInsets();
   const [title, setTitle] = useState('');
   const [tagId, setTagId] = useState(() => tags[0]?.id || 'life');
+  const [pendingArchive, setPendingArchive] = useState<ActivityItem | null>(null);
   const visibleItems = useMemo(
     () => [
       ...items.filter((item) => !item.archived),
@@ -42,6 +43,21 @@ export default function ManageItemsScreen({ items, tags, onChangeItems, onBack }
 
   const removeItem = (id: string) => {
     onChangeItems(items.filter((item) => item.id !== id));
+  };
+
+  const toggleArchive = (item: ActivityItem) => {
+    if (item.archived) {
+      updateItem({ ...item, archived: false });
+      return;
+    }
+
+    setPendingArchive(item);
+  };
+
+  const confirmArchive = () => {
+    if (!pendingArchive) return;
+    updateItem({ ...pendingArchive, archived: true });
+    setPendingArchive(null);
   };
 
   return (
@@ -106,7 +122,7 @@ export default function ManageItemsScreen({ items, tags, onChangeItems, onBack }
                   </Text>
                 </View>
                 <Pressable
-                  onPress={() => updateItem({ ...item, archived: !item.archived })}
+                  onPress={() => toggleArchive(item)}
                   style={styles.smallButton}
                 >
                   <Text style={styles.smallButtonText}>{item.archived ? '恢复' : '归档'}</Text>
@@ -119,6 +135,32 @@ export default function ManageItemsScreen({ items, tags, onChangeItems, onBack }
           })}
         </View>
       </ScrollView>
+
+      {pendingArchive && (
+        <View style={styles.confirmOverlay}>
+          <Pressable style={styles.confirmScrim} onPress={() => setPendingArchive(null)} />
+          <View style={styles.confirmCard}>
+            <Text style={styles.confirmTitle}>归档事件</Text>
+            <Text style={styles.confirmBody}>
+              归档「{pendingArchive.title}」后，它将不再出现在快捷记录的选择列表里，历史记录和统计不会删除。
+            </Text>
+            <View style={styles.confirmActions}>
+              <Pressable
+                onPress={() => setPendingArchive(null)}
+                style={[styles.confirmButton, styles.cancelButton]}
+              >
+                <Text style={styles.cancelText}>取消</Text>
+              </Pressable>
+              <Pressable
+                onPress={confirmArchive}
+                style={[styles.confirmButton, styles.archiveButton]}
+              >
+                <Text style={styles.archiveText}>确认归档</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -182,4 +224,42 @@ const styles = StyleSheet.create({
   smallButton: { paddingHorizontal: 8, paddingVertical: 6, borderRadius: 999, backgroundColor: COLORS.inputBg },
   smallButtonText: { fontSize: 11, fontWeight: '800', color: COLORS.muted },
   deleteText: { fontSize: 11, fontWeight: '800', color: '#9B6E64' },
+  confirmOverlay: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 28,
+  },
+  confirmScrim: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: COLORS.scrim,
+  },
+  confirmCard: {
+    width: '100%',
+    borderRadius: 20,
+    backgroundColor: COLORS.sheet,
+    padding: 18,
+    gap: 12,
+    shadowColor: COLORS.ink,
+    shadowOffset: { width: 0, height: 14 },
+    shadowOpacity: 0.18,
+    shadowRadius: 28,
+    elevation: 18,
+  },
+  confirmTitle: { fontSize: 18, fontWeight: '800', color: COLORS.ink },
+  confirmBody: { fontSize: 13, fontWeight: '500', color: COLORS.muted, lineHeight: 20 },
+  confirmActions: { flexDirection: 'row', gap: 10, marginTop: 4 },
+  confirmButton: { flex: 1, alignItems: 'center', borderRadius: 14, paddingVertical: 12 },
+  cancelButton: { backgroundColor: COLORS.inputBg },
+  archiveButton: { backgroundColor: '#C9A9A0' },
+  cancelText: { fontSize: 14, fontWeight: '800', color: COLORS.muted },
+  archiveText: { fontSize: 14, fontWeight: '800', color: '#FFFFFF' },
 });
