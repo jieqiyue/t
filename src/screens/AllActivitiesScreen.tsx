@@ -67,7 +67,11 @@ export default function AllActivitiesScreen({
             </Text>
           </View>
           <Pressable onPress={onOpenSettings} style={styles.settingsButton} hitSlop={10}>
-            <Text style={styles.settingsIcon}>···</Text>
+            <View style={styles.moreDots}>
+              <View style={styles.moreDot} />
+              <View style={styles.moreDot} />
+              <View style={styles.moreDot} />
+            </View>
           </Pressable>
         </View>
 
@@ -266,7 +270,7 @@ function CloudOverview({
             <Text
               style={[
                 styles.cloudText,
-                { color: category.text, fontSize },
+                { color: category.text, fontSize, lineHeight: Math.round(fontSize * 1.15) },
               ]}
             >
               {item.title}
@@ -389,13 +393,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  settingsIcon: {
-    color: COLORS.muted,
-    fontSize: 18,
-    fontWeight: '800',
-    letterSpacing: -1,
-    marginTop: -8,
-  },
+  moreDots: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  moreDot: { width: 3.5, height: 3.5, borderRadius: 2, backgroundColor: COLORS.muted },
   filters: { gap: 7, paddingTop: 13, paddingBottom: 1 },
   filterChip: {
     paddingHorizontal: 12,
@@ -483,7 +482,7 @@ const styles = StyleSheet.create({
   categoryTitle: { fontSize: 13, fontWeight: '800', color: COLORS.ink },
   categoryCount: { fontSize: 12, fontWeight: '800' },
   cloudPill: { flexDirection: 'row', alignItems: 'baseline', gap: 5 },
-  cloudText: { fontWeight: '800', lineHeight: 28 },
+  cloudText: { fontWeight: '800' },
   cloudCount: { fontWeight: '700', opacity: 0.75 },
   totalCard: {
     marginTop: 18,

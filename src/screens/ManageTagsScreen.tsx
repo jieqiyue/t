@@ -2,14 +2,17 @@ import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '../theme';
-import { ActivityItem, ActivityTag } from '../types';
+import { Activity, ActivityItem, ActivityTag } from '../types';
 
 interface Props {
   tags: ActivityTag[];
   items: ActivityItem[];
+  activities: Activity[];
   onChangeTags: (tags: ActivityTag[]) => void;
   onBack: () => void;
 }
+
+const DEFAULT_TAG_IDS = ['work', 'life', 'sport', 'fun'];
 
 const PALETTE = [
   { dot: '#A8B5A2', text: '#5E7257', soft: '#E9EEE6' },
@@ -19,12 +22,20 @@ const PALETTE = [
   { dot: '#B6A5B8', text: '#765F78', soft: '#EEE7EF' },
 ];
 
-export default function ManageTagsScreen({ tags, items, onChangeTags, onBack }: Props) {
+export default function ManageTagsScreen({ tags, items, activities, onChangeTags, onBack }: Props) {
   const insets = useSafeAreaInsets();
   const [label, setLabel] = useState('');
   const [paletteIndex, setPaletteIndex] = useState(0);
   const [editingId, setEditingId] = useState<ActivityTag['id'] | null>(null);
   const [editingLabel, setEditingLabel] = useState('');
+
+  // A tag is "in use" if any event OR any logged record still references it.
+  const isTagInUse = (id: ActivityTag['id']) =>
+    items.some((item) => item.tagId === id) ||
+    activities.some((activity) => (activity.tagId || activity.category) === id);
+  const isDefaultTag = (id: ActivityTag['id']) => DEFAULT_TAG_IDS.includes(id as string);
+  const canDeleteTag = (id: ActivityTag['id']) =>
+    !isTagInUse(id) && !isDefaultTag(id) && tags.length > 1;
 
   const addTag = () => {
     const trimmed = label.trim();
@@ -50,8 +61,7 @@ export default function ManageTagsScreen({ tags, items, onChangeTags, onBack }: 
   };
 
   const removeTag = (id: ActivityTag['id']) => {
-    const used = items.some((item) => item.tagId === id);
-    if (used || tags.length <= 1) return;
+    if (!canDeleteTag(id)) return;
     onChangeTags(tags.filter((tag) => tag.id !== id));
   };
 
@@ -104,7 +114,10 @@ export default function ManageTagsScreen({ tags, items, onChangeTags, onBack }: 
 
         <View style={styles.list}>
           {tags.map((tag) => {
-            const used = items.some((item) => item.tagId === tag.id);
+            const inUse = isTagInUse(tag.id);
+            const isDefault = isDefaultTag(tag.id);
+            const deletable = canDeleteTag(tag.id);
+            const hint = isDefault ? '默认分类' : inUse ? '正在使用' : '未使用';
             const editing = editingId === tag.id;
             return (
               <View key={tag.id} style={styles.tagRow}>
@@ -120,7 +133,7 @@ export default function ManageTagsScreen({ tags, items, onChangeTags, onBack }: 
                 ) : (
                   <View style={styles.tagTextBlock}>
                     <Text style={styles.tagLabel}>{tag.label}</Text>
-                    <Text style={styles.tagHint}>{used ? '正在使用' : '未使用'}</Text>
+                    <Text style={styles.tagHint}>{hint}</Text>
                   </View>
                 )}
                 {editing ? (
@@ -140,8 +153,8 @@ export default function ManageTagsScreen({ tags, items, onChangeTags, onBack }: 
                 )}
                 <Pressable
                   onPress={() => removeTag(tag.id)}
-                  disabled={used || tags.length <= 1}
-                  style={[styles.smallButton, (used || tags.length <= 1) && styles.disabled]}
+                  disabled={!deletable}
+                  style={[styles.smallButton, !deletable && styles.disabled]}
                 >
                   <Text style={styles.deleteText}>删除</Text>
                 </Pressable>

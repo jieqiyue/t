@@ -8,14 +8,16 @@ interface Props {
   items: ActivityItem[];
   tags: ActivityTag[];
   onChangeItems: (items: ActivityItem[]) => void;
+  onDeleteItem: (item: ActivityItem) => void;
   onBack: () => void;
 }
 
-export default function ManageItemsScreen({ items, tags, onChangeItems, onBack }: Props) {
+export default function ManageItemsScreen({ items, tags, onChangeItems, onDeleteItem, onBack }: Props) {
   const insets = useSafeAreaInsets();
   const [title, setTitle] = useState('');
   const [tagId, setTagId] = useState(() => tags[0]?.id || 'life');
   const [pendingArchive, setPendingArchive] = useState<ActivityItem | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<ActivityItem | null>(null);
   const visibleItems = useMemo(
     () => [
       ...items.filter((item) => !item.archived),
@@ -41,10 +43,6 @@ export default function ManageItemsScreen({ items, tags, onChangeItems, onBack }
     onChangeItems(items.map((item) => (item.id === next.id ? next : item)));
   };
 
-  const removeItem = (id: string) => {
-    onChangeItems(items.filter((item) => item.id !== id));
-  };
-
   const toggleArchive = (item: ActivityItem) => {
     if (item.archived) {
       updateItem({ ...item, archived: false });
@@ -58,6 +56,12 @@ export default function ManageItemsScreen({ items, tags, onChangeItems, onBack }
     if (!pendingArchive) return;
     updateItem({ ...pendingArchive, archived: true });
     setPendingArchive(null);
+  };
+
+  const confirmDelete = () => {
+    if (!pendingDelete) return;
+    onDeleteItem(pendingDelete);
+    setPendingDelete(null);
   };
 
   return (
@@ -127,7 +131,7 @@ export default function ManageItemsScreen({ items, tags, onChangeItems, onBack }
                 >
                   <Text style={styles.smallButtonText}>{item.archived ? '恢复' : '归档'}</Text>
                 </Pressable>
-                <Pressable onPress={() => removeItem(item.id)} style={styles.smallButton}>
+                <Pressable onPress={() => setPendingDelete(item)} style={styles.smallButton}>
                   <Text style={styles.deleteText}>删除</Text>
                 </Pressable>
               </View>
@@ -156,6 +160,32 @@ export default function ManageItemsScreen({ items, tags, onChangeItems, onBack }
                 style={[styles.confirmButton, styles.archiveButton]}
               >
                 <Text style={styles.archiveText}>确认归档</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {pendingDelete && (
+        <View style={styles.confirmOverlay}>
+          <Pressable style={styles.confirmScrim} onPress={() => setPendingDelete(null)} />
+          <View style={styles.confirmCard}>
+            <Text style={styles.confirmTitle}>删除事件</Text>
+            <Text style={styles.confirmBody}>
+              删除「{pendingDelete.title}」会一并清除它的所有历史记录和统计，且无法恢复。若只是想暂时不再记录、保留历史，请改用「归档」。
+            </Text>
+            <View style={styles.confirmActions}>
+              <Pressable
+                onPress={() => setPendingDelete(null)}
+                style={[styles.confirmButton, styles.cancelButton]}
+              >
+                <Text style={styles.cancelText}>取消</Text>
+              </Pressable>
+              <Pressable
+                onPress={confirmDelete}
+                style={[styles.confirmButton, styles.deleteButton]}
+              >
+                <Text style={styles.archiveText}>确认删除</Text>
               </Pressable>
             </View>
           </View>
@@ -260,6 +290,7 @@ const styles = StyleSheet.create({
   confirmButton: { flex: 1, alignItems: 'center', borderRadius: 14, paddingVertical: 12 },
   cancelButton: { backgroundColor: COLORS.inputBg },
   archiveButton: { backgroundColor: '#C9A9A0' },
+  deleteButton: { backgroundColor: '#9B6E64' },
   cancelText: { fontSize: 14, fontWeight: '800', color: COLORS.muted },
   archiveText: { fontSize: 14, fontWeight: '800', color: '#FFFFFF' },
 });

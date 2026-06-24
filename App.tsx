@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, BackHandler, StyleSheet, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -8,6 +8,7 @@ import AllActivitiesScreen from './src/screens/AllActivitiesScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import ManageItemsScreen from './src/screens/ManageItemsScreen';
 import ManageTagsScreen from './src/screens/ManageTagsScreen';
+import RecordDoneScreen from './src/screens/RecordDoneScreen';
 import QuickRecordSheet from './src/components/QuickRecordSheet';
 import {
   loadActivities,
@@ -19,8 +20,35 @@ import {
   saveActivityOverviewStyle,
   saveTags,
 } from './src/storage';
-import { Activity, ActivityItem, ActivityOverviewStyle, ActivityTag, CategoryId } from './src/types';
+import {
+  Activity,
+  ActivityItem,
+  ActivityOverviewStyle,
+  ActivityTag,
+  CategoryId,
+  NewRecordInput,
+} from './src/types';
 import { COLORS } from './src/theme';
+import { isSameDay } from './src/dateUtils';
+
+/**
+ * Persists `value` via `save` whenever it changes — but skips the first run
+ * after hydration, so freshly-loaded data isn't immediately written back.
+ * `ready` should be false while loading; the skip is consumed on the first
+ * ready render (the hydration commit), and real changes save from then on.
+ */
+function usePersist<T>(value: T, ready: boolean, save: (value: T) => void) {
+  const hydrated = useRef(false);
+  useEffect(() => {
+    if (!ready) return;
+    if (!hydrated.current) {
+      hydrated.current = true;
+      return;
+    }
+    save(value);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, ready]);
+}
 
 type Route =
   | { name: 'timeline' }
@@ -39,6 +67,7 @@ export default function App() {
   const [tags, setTags] = useState<ActivityTag[]>([]);
   const [items, setItems] = useState<ActivityItem[]>([]);
   const [settingsFrom, setSettingsFrom] = useState<'timeline' | 'activities'>('timeline');
+  const [justRecorded, setJustRecorded] = useState<Activity | null>(null);
 
   useEffect(() => {
     Promise.all([loadActivities(), loadActivityOverviewStyle(), loadTags()]).then(async ([list, style, tagList]) => {
@@ -51,26 +80,20 @@ export default function App() {
     });
   }, []);
 
-  // Persist whenever the list changes (after initial load).
-  useEffect(() => {
-    if (!loading) saveActivities(activities);
-  }, [activities, loading]);
-
-  useEffect(() => {
-    if (!loading) saveActivityOverviewStyle(overviewStyle);
-  }, [overviewStyle, loading]);
-
-  useEffect(() => {
-    if (!loading) saveTags(tags);
-  }, [tags, loading]);
-
-  useEffect(() => {
-    if (!loading) saveActivityItems(items);
-  }, [items, loading]);
+  // Persist on change, skipping the redundant write right after hydration.
+  usePersist(activities, !loading, saveActivities);
+  usePersist(overviewStyle, !loading, saveActivityOverviewStyle);
+  usePersist(tags, !loading, saveTags);
+  usePersist(items, !loading, saveActivityItems);
 
   // Android hardware back: close sheet, or return to the timeline.
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (justRecorded) {
+        setJustRecorded(null);
+        setRoute({ name: 'timeline' });
+        return true;
+      }
       if (sheetOpen) {
         setSheetOpen(false);
         return true;
@@ -82,24 +105,43 @@ export default function App() {
       return false;
     });
     return () => sub.remove();
-  }, [sheetOpen, route]);
+  }, [sheetOpen, route, justRecorded]);
 
-  const addActivity = useCallback((item: ActivityItem) => {
-    const tag = tags.find((candidate) => candidate.id === item.tagId);
+  const addActivity = useCallback((input: NewRecordInput) => {
+    const tag = tags.find((candidate) => candidate.id === input.tagId);
     const category = (tag?.id === 'work' || tag?.id === 'life' || tag?.id === 'sport' || tag?.id === 'fun'
       ? tag.id
       : 'life') as CategoryId;
     const entry: Activity = {
       id: `${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6)}`,
-      itemId: item.id,
-      tagId: item.tagId,
-      title: item.title,
+      itemId: input.itemId,
+      tagId: input.tagId,
+      title: input.title,
       category,
+      note: input.note,
+      mood: input.mood,
+      weather: input.weather,
       timestamp: Date.now(),
     };
     setActivities((prev) => [entry, ...prev]);
     setSheetOpen(false);
+    setJustRecorded(entry);
   }, [tags]);
+
+  // Deleting an item is destructive: drop the item AND every record it produced
+  // (matched by itemId, or by title+tag for seeded/legacy records with no itemId).
+  const deleteItem = useCallback((item: ActivityItem) => {
+    setItems((prev) => prev.filter((it) => it.id !== item.id));
+    setActivities((prev) =>
+      prev.filter(
+        (a) =>
+          !(
+            a.itemId === item.id ||
+            (a.title === item.title && (a.tagId || a.category) === item.tagId)
+          ),
+      ),
+    );
+  }, []);
 
   if (loading) {
     return (
@@ -112,7 +154,17 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <StatusBar style="dark" />
-      {route.name === 'timeline' ? (
+      {justRecorded ? (
+        <RecordDoneScreen
+          activity={justRecorded}
+          tags={tags}
+          todayCount={activities.filter((a) => isSameDay(new Date(a.timestamp), new Date())).length}
+          onBack={() => {
+            setJustRecorded(null);
+            setRoute({ name: 'timeline' });
+          }}
+        />
+      ) : route.name === 'timeline' ? (
         <TimelineScreen
           activities={activities}
           tags={tags}
@@ -157,12 +209,14 @@ export default function App() {
           items={items}
           tags={tags}
           onChangeItems={setItems}
+          onDeleteItem={deleteItem}
           onBack={() => setRoute({ name: 'settings', from: settingsFrom })}
         />
       ) : route.name === 'manageTags' ? (
         <ManageTagsScreen
           tags={tags}
           items={items}
+          activities={activities}
           onChangeTags={setTags}
           onBack={() => setRoute({ name: 'settings', from: settingsFrom })}
         />

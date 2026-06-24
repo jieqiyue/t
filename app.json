@@ -10,6 +10,7 @@
       "supportsTablet": true
     },
     "android": {
+    "package": "com.jieqiyue.dailyactivitylog",
       "adaptiveIcon": {
         "backgroundColor": "#F1ECE2",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -20,6 +21,11 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "19635415-9fa7-4605-ae62-d68fb643f789"
+      }
     }
   }
 }

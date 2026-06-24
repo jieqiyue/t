@@ -53,7 +53,11 @@ export default function TimelineScreen({
             <Text style={styles.encourage}>{encouragementFor(today)}</Text>
           </View>
           <Pressable onPress={onOpenSettings} style={styles.iconButton} hitSlop={10}>
-            <Text style={styles.iconButtonText}>···</Text>
+            <View style={styles.moreDots}>
+              <View style={styles.moreDot} />
+              <View style={styles.moreDot} />
+              <View style={styles.moreDot} />
+            </View>
           </Pressable>
         </View>
 
@@ -102,6 +106,11 @@ export default function TimelineScreen({
                       <Text style={styles.rowTitle}>{a.title}</Text>
                       <Text style={styles.statHint}>统计 ›</Text>
                     </View>
+                    {!!a.note && (
+                      <Text style={styles.rowNote} numberOfLines={2}>
+                        {a.note}
+                      </Text>
+                    )}
                     <Text style={[styles.rowCat, { color: cat.text }]}>{cat.label}</Text>
                   </View>
                 </Pressable>
@@ -144,13 +153,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 2,
   },
-  iconButtonText: {
-    color: COLORS.muted,
-    fontSize: 18,
-    fontWeight: '800',
-    letterSpacing: -1,
-    marginTop: -8,
-  },
+  moreDots: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  moreDot: { width: 3.5, height: 3.5, borderRadius: 2, backgroundColor: COLORS.muted },
   overviewCard: {
     marginTop: 18,
     backgroundColor: COLORS.card,
@@ -204,6 +208,7 @@ const styles = StyleSheet.create({
   rowTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   rowTitle: { fontSize: 14, fontWeight: '700', color: COLORS.ink, flexShrink: 1, paddingRight: 8 },
   statHint: { fontSize: 10, fontWeight: '800', color: COLORS.accent },
+  rowNote: { fontSize: 12, fontWeight: '500', color: COLORS.muted, lineHeight: 18 },
   rowCat: { fontSize: 11, fontWeight: '800', letterSpacing: 0.3 },
   empty: { alignItems: 'center', paddingTop: 60, gap: 8 },
   emptyTitle: { fontSize: 15, fontWeight: '800', color: COLORS.muted },
