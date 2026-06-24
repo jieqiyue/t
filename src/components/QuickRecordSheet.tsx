@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Animated,
   Easing,
@@ -14,7 +14,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { COLORS } from '../theme';
+import { Palette, useTheme } from '../theme';
 import { ActivityItem, ActivityTag, MoodId, NewRecordInput, WeatherId } from '../types';
 import { timeLabel } from '../dateUtils';
 import { MOODS, MoodFace, WEATHERS, WeatherIcon } from './moodWeather';
@@ -29,6 +29,8 @@ interface Props {
 
 export default function QuickRecordSheet({ visible, items, tags, onClose, onSubmit }: Props) {
   const insets = useSafeAreaInsets();
+  const c = useTheme();
+  const styles = useMemo(() => createStyles(c), [c]);
   const [now, setNow] = useState(() => Date.now());
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [note, setNote] = useState('');
@@ -122,10 +124,10 @@ export default function QuickRecordSheet({ visible, items, tags, onClose, onSubm
                           onPress={() => setSelectedItemId(item.id)}
                           style={[
                             styles.eventChip,
-                            active && { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
+                            active && { backgroundColor: c.accent, borderColor: c.accent },
                           ]}
                         >
-                          {!active && <View style={[styles.eventDot, { backgroundColor: tag?.dot || COLORS.accent }]} />}
+                          {!active && <View style={[styles.eventDot, { backgroundColor: tag?.dot || c.accent }]} />}
                           <Text style={[styles.eventText, active && styles.eventTextActive]}>
                             {item.title}
                           </Text>
@@ -141,7 +143,7 @@ export default function QuickRecordSheet({ visible, items, tags, onClose, onSubm
                   <TextInput
                     style={styles.input}
                     placeholder="记录此刻想说的话…"
-                    placeholderTextColor={COLORS.muted3}
+                    placeholderTextColor={c.muted3}
                     value={note}
                     onChangeText={setNote}
                     multiline
@@ -162,7 +164,7 @@ export default function QuickRecordSheet({ visible, items, tags, onClose, onSubm
                           style={styles.moodItem}
                         >
                           <View style={[styles.moodFace, active && styles.moodFaceActive]}>
-                            <MoodFace id={m.id} color={active ? '#5E7257' : '#B0A695'} />
+                            <MoodFace id={m.id} color={active ? c.accentInk : c.muted2} />
                           </View>
                           <Text style={[styles.moodLabel, active && styles.moodLabelActive]}>
                             {m.label}
@@ -185,7 +187,7 @@ export default function QuickRecordSheet({ visible, items, tags, onClose, onSubm
                           onPress={() => setWeather(active ? null : w.id)}
                           style={[
                             styles.weatherChip,
-                            active && { backgroundColor: '#F4EFE0', borderColor: w.color, borderWidth: 2 },
+                            active && { backgroundColor: c.accentSoft, borderColor: w.color, borderWidth: 2 },
                           ]}
                         >
                           <WeatherIcon id={w.id} />
@@ -220,12 +222,12 @@ export default function QuickRecordSheet({ visible, items, tags, onClose, onSubm
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (c: Palette) => StyleSheet.create({
   fill: { flex: 1 },
-  scrim: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: COLORS.scrim },
+  scrim: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: c.scrim },
   bottom: { flex: 1, justifyContent: 'flex-end' },
   sheet: {
-    backgroundColor: COLORS.sheet,
+    backgroundColor: c.sheet,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     paddingHorizontal: 20,
@@ -240,36 +242,36 @@ const styles = StyleSheet.create({
   },
   grabber: { width: 38, height: 4, borderRadius: 999, backgroundColor: '#DAD3C7', alignSelf: 'center' },
   headerBlock: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  title: { fontSize: 17, fontWeight: '800', color: COLORS.ink },
-  subtitle: { fontSize: 11.5, fontWeight: '600', color: COLORS.muted3 },
+  title: { fontSize: 17, fontWeight: '800', color: c.ink },
+  subtitle: { fontSize: 11.5, fontWeight: '600', color: c.muted3 },
   body: { flexShrink: 1 },
   bodyContent: { gap: 14, paddingBottom: 4 },
   section: { gap: 8 },
-  sectionLabel: { fontSize: 10.5, fontWeight: '800', letterSpacing: 1, color: COLORS.gold },
+  sectionLabel: { fontSize: 10.5, fontWeight: '800', letterSpacing: 1, color: c.gold },
   wrapRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
   eventChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: COLORS.card,
+    backgroundColor: c.card,
     borderWidth: 1.5,
-    borderColor: COLORS.border,
+    borderColor: c.border,
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 999,
   },
   eventDot: { width: 6, height: 6, borderRadius: 999 },
-  eventText: { fontSize: 12.5, fontWeight: '700', color: COLORS.muted },
+  eventText: { fontSize: 12.5, fontWeight: '700', color: c.muted },
   eventTextActive: { color: '#FFFFFF', fontWeight: '800' },
   input: {
-    backgroundColor: COLORS.inputBg,
+    backgroundColor: c.inputBg,
     borderRadius: 15,
     paddingHorizontal: 13,
     paddingVertical: 12,
     minHeight: 56,
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.ink,
+    color: c.ink,
     textAlignVertical: 'top',
     lineHeight: 21,
   },
@@ -279,15 +281,15 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 999,
-    backgroundColor: COLORS.card,
+    backgroundColor: c.card,
     borderWidth: 1.5,
-    borderColor: COLORS.border,
+    borderColor: c.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  moodFaceActive: { backgroundColor: '#EDF0EA', borderColor: COLORS.accent, borderWidth: 2 },
-  moodLabel: { fontSize: 9.5, fontWeight: '600', color: COLORS.muted3 },
-  moodLabelActive: { color: COLORS.accentInk, fontWeight: '800' },
+  moodFaceActive: { backgroundColor: c.accentSoft, borderColor: c.accent, borderWidth: 2 },
+  moodLabel: { fontSize: 9.5, fontWeight: '600', color: c.muted3 },
+  moodLabelActive: { color: c.accentInk, fontWeight: '800' },
   weatherRow: { flexDirection: 'row', gap: 7 },
   weatherChip: {
     flex: 1,
@@ -295,23 +297,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 5,
-    backgroundColor: COLORS.card,
+    backgroundColor: c.card,
     borderWidth: 1.5,
-    borderColor: COLORS.border,
+    borderColor: c.border,
     paddingVertical: 8,
     borderRadius: 12,
   },
-  weatherText: { fontSize: 12, fontWeight: '700', color: COLORS.muted },
-  weatherTextActive: { color: '#897B5E', fontWeight: '800' },
-  empty: { backgroundColor: COLORS.inputBg, borderRadius: 16, padding: 16, gap: 6, marginBottom: 4 },
-  emptyTitle: { fontSize: 14, fontWeight: '800', color: COLORS.ink },
-  emptyHint: { fontSize: 12, color: COLORS.muted3, lineHeight: 18 },
+  weatherText: { fontSize: 12, fontWeight: '700', color: c.muted },
+  weatherTextActive: { color: c.accentInk, fontWeight: '800' },
+  empty: { backgroundColor: c.inputBg, borderRadius: 16, padding: 16, gap: 6, marginBottom: 4 },
+  emptyTitle: { fontSize: 14, fontWeight: '800', color: c.ink },
+  emptyHint: { fontSize: 12, color: c.muted3, lineHeight: 18 },
   submit: {
-    backgroundColor: COLORS.accent,
+    backgroundColor: c.accent,
     borderRadius: 15,
     paddingVertical: 14,
     alignItems: 'center',
-    shadowColor: COLORS.accent,
+    shadowColor: c.accent,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.42,
     shadowRadius: 14,

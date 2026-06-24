@@ -1,7 +1,7 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CATEGORY_MAP, COLORS } from '../theme';
+import { CATEGORY_MAP, Palette, useTheme } from '../theme';
 import { Activity, ActivityTag } from '../types';
 import { timeLabel } from '../dateUtils';
 import { CheckIcon, MOOD_MAP, MoodFace, WEATHER_MAP, WeatherIcon } from '../components/moodWeather';
@@ -15,6 +15,8 @@ interface Props {
 
 export default function RecordDoneScreen({ activity, tags, todayCount, onBack }: Props) {
   const insets = useSafeAreaInsets();
+  const c = useTheme();
+  const styles = useMemo(() => createStyles(c), [c]);
   const anim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -53,19 +55,19 @@ export default function RecordDoneScreen({ activity, tags, todayCount, onBack }:
           <Text style={styles.cardTitle}>{activity.title}</Text>
           {!!activity.note && <Text style={styles.cardNote}>{activity.note}</Text>}
           <View style={styles.tagsRow}>
-            <View style={[styles.catPill, { backgroundColor: tag.soft || COLORS.accentSoft }]}>
+            <View style={[styles.catPill, { backgroundColor: tag.soft || c.accentSoft }]}>
               <View style={[styles.catDot, { backgroundColor: tag.dot }]} />
               <Text style={[styles.catText, { color: tag.text }]}>{tag.label}</Text>
             </View>
             {mood && (
               <View style={styles.metaPill}>
-                <MoodFace id={mood.id} color={COLORS.muted} size={12} />
+                <MoodFace id={mood.id} color={c.muted} size={12} />
                 <Text style={styles.metaText}>{mood.label}</Text>
               </View>
             )}
             {weather && (
               <View style={styles.metaPill}>
-                <WeatherIcon id={weather.id} color={COLORS.muted} size={11} />
+                <WeatherIcon id={weather.id} color={c.muted} size={11} />
                 <Text style={styles.metaText}>{weather.label}</Text>
               </View>
             )}
@@ -81,14 +83,14 @@ export default function RecordDoneScreen({ activity, tags, todayCount, onBack }:
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: COLORS.bgAlt },
+const createStyles = (c: Palette) => StyleSheet.create({
+  root: { flex: 1, backgroundColor: c.bgAlt },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 30, gap: 22 },
   checkOuter: {
     width: 84,
     height: 84,
     borderRadius: 999,
-    backgroundColor: COLORS.accentSoft,
+    backgroundColor: c.accentSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -96,33 +98,33 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 999,
-    backgroundColor: COLORS.accent,
+    backgroundColor: c.accent,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: COLORS.accent,
+    shadowColor: c.accent,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.5,
     shadowRadius: 18,
     elevation: 8,
   },
   titleBlock: { alignItems: 'center', gap: 7 },
-  title: { fontSize: 21, fontWeight: '800', color: COLORS.ink },
-  subtitle: { fontSize: 13, fontWeight: '500', color: COLORS.muted2, textAlign: 'center', lineHeight: 21 },
+  title: { fontSize: 21, fontWeight: '800', color: c.ink },
+  subtitle: { fontSize: 13, fontWeight: '500', color: c.muted2, textAlign: 'center', lineHeight: 21 },
   card: {
     width: '100%',
-    backgroundColor: COLORS.card,
+    backgroundColor: c.card,
     borderRadius: 18,
     paddingHorizontal: 16,
     paddingVertical: 15,
     gap: 11,
-    shadowColor: COLORS.ink,
+    shadowColor: c.ink,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.05,
     shadowRadius: 12,
     elevation: 2,
   },
-  cardTitle: { fontSize: 14, fontWeight: '700', color: COLORS.ink, lineHeight: 20 },
-  cardNote: { fontSize: 12.5, fontWeight: '500', color: COLORS.muted, lineHeight: 19, marginTop: -3 },
+  cardTitle: { fontSize: 14, fontWeight: '700', color: c.ink, lineHeight: 20 },
+  cardNote: { fontSize: 12.5, fontWeight: '500', color: c.muted, lineHeight: 19, marginTop: -3 },
   tagsRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 },
   catPill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 9, paddingVertical: 3, borderRadius: 999 },
   catDot: { width: 6, height: 6, borderRadius: 999 },
@@ -131,13 +133,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: COLORS.inputBg,
+    backgroundColor: c.inputBg,
     paddingHorizontal: 9,
     paddingVertical: 3,
     borderRadius: 999,
   },
-  metaText: { fontSize: 10.5, fontWeight: '700', color: COLORS.muted },
-  time: { fontSize: 10.5, fontWeight: '600', color: COLORS.gold, marginLeft: 'auto' },
-  link: { fontSize: 13, fontWeight: '800', color: COLORS.accent },
+  metaText: { fontSize: 10.5, fontWeight: '700', color: c.muted },
+  time: { fontSize: 10.5, fontWeight: '600', color: c.gold, marginLeft: 'auto' },
+  link: { fontSize: 13, fontWeight: '800', color: c.accent },
   linkPressed: { opacity: 0.6 },
 });

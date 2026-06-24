@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { DimensionValue, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CATEGORY_MAP, COLORS } from '../theme';
+import { CATEGORY_MAP, Palette, useTheme } from '../theme';
 import { Activity, ActivityOverviewStyle, ActivityTag } from '../types';
 
 interface Props {
@@ -32,6 +32,7 @@ export default function AllActivitiesScreen({
   onOpenStats,
 }: Props) {
   const insets = useSafeAreaInsets();
+  const styles = useThemedStyles();
   const [filter, setFilter] = useState<TagFilter>('all');
   const [cloudMode, setCloudMode] = useState<CloudMode>('frequency');
 
@@ -152,6 +153,7 @@ function CategoryFilters({
   value: TagFilter;
   onChange: (value: TagFilter) => void;
 }) {
+  const styles = useThemedStyles();
   const filters: { id: TagFilter; label: string }[] = [
     { id: 'all', label: '全部' },
     ...tags.map((tag) => ({ id: tag.id, label: tag.label })),
@@ -192,6 +194,7 @@ function RankOverview({
   maxCount: number;
   onOpenStats: (title: string) => void;
 }) {
+  const styles = useThemedStyles();
   if (items.length === 0) return <EmptyState />;
 
   return (
@@ -242,6 +245,7 @@ function CloudOverview({
   maxCount: number;
   onOpenStats: (title: string) => void;
 }) {
+  const styles = useThemedStyles();
   if (items.length === 0) return <EmptyState />;
 
   return (
@@ -301,6 +305,7 @@ function CloudByCategoryOverview({
   maxCount: number;
   onOpenStats: (title: string) => void;
 }) {
+  const styles = useThemedStyles();
   if (items.length === 0) return <EmptyState />;
 
   const groups = tags
@@ -337,6 +342,7 @@ function CloudByCategoryOverview({
 }
 
 function CategoryTotals({ tags, totals }: { tags: ActivityTag[]; totals: Record<string, number> }) {
+  const styles = useThemedStyles();
   return (
     <View style={styles.totalCard}>
       <Text style={styles.totalTitle}>各分类累计</Text>
@@ -356,6 +362,7 @@ function CategoryTotals({ tags, totals }: { tags: ActivityTag[]; totals: Record<
 }
 
 function EmptyState() {
+  const styles = useThemedStyles();
   return (
     <View style={styles.empty}>
       <Text style={styles.emptyTitle}>还没有活动</Text>
@@ -364,56 +371,61 @@ function EmptyState() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: COLORS.bgAlt },
+function useThemedStyles() {
+  const c = useTheme();
+  return useMemo(() => createStyles(c), [c]);
+}
+
+const createStyles = (c: Palette) => StyleSheet.create({
+  root: { flex: 1, backgroundColor: c.bgAlt },
   scroll: { paddingHorizontal: 20, paddingTop: 8 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   roundButton: {
     width: 34,
     height: 34,
     borderRadius: 999,
-    backgroundColor: COLORS.card,
+    backgroundColor: c.card,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: COLORS.ink,
+    shadowColor: c.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 6,
     elevation: 2,
   },
-  backIcon: { fontSize: 20, color: COLORS.muted, marginTop: -2 },
+  backIcon: { fontSize: 20, color: c.muted, marginTop: -2 },
   titleBlock: { flex: 1, gap: 2 },
-  title: { fontSize: 22, fontWeight: '800', color: COLORS.ink, lineHeight: 25 },
-  subtitle: { fontSize: 11.5, fontWeight: '600', color: COLORS.muted3 },
+  title: { fontSize: 22, fontWeight: '800', color: c.ink, lineHeight: 25 },
+  subtitle: { fontSize: 11.5, fontWeight: '600', color: c.muted3 },
   settingsButton: {
     width: 34,
     height: 34,
     borderRadius: 999,
-    backgroundColor: COLORS.card,
+    backgroundColor: c.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
   moreDots: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  moreDot: { width: 3.5, height: 3.5, borderRadius: 2, backgroundColor: COLORS.muted },
+  moreDot: { width: 3.5, height: 3.5, borderRadius: 2, backgroundColor: c.muted },
   filters: { gap: 7, paddingTop: 13, paddingBottom: 1 },
   filterChip: {
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 999,
-    backgroundColor: COLORS.card,
+    backgroundColor: c.card,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: c.border,
   },
-  filterChipActive: { backgroundColor: COLORS.ink, borderColor: COLORS.ink },
-  filterText: { fontSize: 12, fontWeight: '700', color: COLORS.muted },
+  filterChipActive: { backgroundColor: c.ink, borderColor: c.ink },
+  filterText: { fontSize: 12, fontWeight: '700', color: c.muted },
   filterTextActive: { color: '#FFFFFF', fontWeight: '800' },
   rankCard: {
     marginTop: 12,
     borderRadius: 18,
-    backgroundColor: COLORS.card,
+    backgroundColor: c.card,
     paddingHorizontal: 15,
     paddingVertical: 4,
-    shadowColor: COLORS.ink,
+    shadowColor: c.ink,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.05,
     shadowRadius: 12,
@@ -422,17 +434,17 @@ const styles = StyleSheet.create({
   rankItem: {
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.inputBg,
+    borderBottomColor: c.inputBg,
     gap: 8,
   },
   rankItemLast: { borderBottomWidth: 0 },
   rankTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   rankName: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 8 },
   smallDot: { width: 8, height: 8, borderRadius: 999 },
-  rankTitle: { flex: 1, fontSize: 14, fontWeight: '700', color: COLORS.ink },
-  rankCount: { fontSize: 13, fontWeight: '800', color: COLORS.ink },
-  rankUnit: { fontSize: 10, fontWeight: '600', color: COLORS.gold },
-  progressTrack: { height: 7, borderRadius: 4, backgroundColor: COLORS.border, overflow: 'hidden' },
+  rankTitle: { flex: 1, fontSize: 14, fontWeight: '700', color: c.ink },
+  rankCount: { fontSize: 13, fontWeight: '800', color: c.ink },
+  rankUnit: { fontSize: 10, fontWeight: '600', color: c.gold },
+  progressTrack: { height: 7, borderRadius: 4, backgroundColor: c.border, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: 4 },
   segmented: {
     flexDirection: 'row',
@@ -446,16 +458,16 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     borderRadius: 9,
-    backgroundColor: COLORS.card,
+    backgroundColor: c.card,
     paddingVertical: 8,
-    shadowColor: COLORS.ink,
+    shadowColor: c.ink,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
     shadowRadius: 4,
   },
   segment: { flex: 1, alignItems: 'center', borderRadius: 9, paddingVertical: 8 },
-  segmentActiveText: { fontSize: 12, fontWeight: '800', color: COLORS.ink },
-  segmentText: { fontSize: 12, fontWeight: '700', color: COLORS.muted2 },
+  segmentActiveText: { fontSize: 12, fontWeight: '800', color: c.ink },
+  segmentText: { fontSize: 12, fontWeight: '700', color: c.muted2 },
   cloud: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -467,11 +479,11 @@ const styles = StyleSheet.create({
   categoryCloud: { marginTop: 14, gap: 14 },
   categoryGroup: {
     borderRadius: 16,
-    backgroundColor: COLORS.card,
+    backgroundColor: c.card,
     paddingHorizontal: 14,
     paddingTop: 12,
     paddingBottom: 14,
-    shadowColor: COLORS.ink,
+    shadowColor: c.ink,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.04,
     shadowRadius: 10,
@@ -479,7 +491,7 @@ const styles = StyleSheet.create({
   },
   categoryHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   categoryName: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  categoryTitle: { fontSize: 13, fontWeight: '800', color: COLORS.ink },
+  categoryTitle: { fontSize: 13, fontWeight: '800', color: c.ink },
   categoryCount: { fontSize: 12, fontWeight: '800' },
   cloudPill: { flexDirection: 'row', alignItems: 'baseline', gap: 5 },
   cloudText: { fontWeight: '800' },
@@ -487,11 +499,11 @@ const styles = StyleSheet.create({
   totalCard: {
     marginTop: 18,
     borderRadius: 16,
-    backgroundColor: COLORS.card,
+    backgroundColor: c.card,
     paddingHorizontal: 15,
     paddingVertical: 13,
     gap: 10,
-    shadowColor: COLORS.ink,
+    shadowColor: c.ink,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.05,
     shadowRadius: 12,
@@ -501,14 +513,14 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     fontWeight: '800',
     letterSpacing: 1.2,
-    color: COLORS.gold,
+    color: c.gold,
   },
   totalGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 10 },
   totalItem: { width: '50%', flexDirection: 'row', alignItems: 'center', gap: 6 },
-  totalLabel: { fontSize: 12, fontWeight: '700', color: COLORS.ink },
+  totalLabel: { fontSize: 12, fontWeight: '700', color: c.ink },
   totalNum: { fontSize: 12, fontWeight: '800' },
   empty: { alignItems: 'center', paddingTop: 72, gap: 8 },
-  emptyTitle: { fontSize: 15, fontWeight: '800', color: COLORS.muted },
-  emptyHint: { fontSize: 12.5, color: COLORS.muted3, textAlign: 'center', lineHeight: 19 },
+  emptyTitle: { fontSize: 15, fontWeight: '800', color: c.muted },
+  emptyHint: { fontSize: 12.5, color: c.muted3, textAlign: 'center', lineHeight: 19 },
   pressed: { opacity: 0.58 },
 });

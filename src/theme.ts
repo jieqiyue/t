@@ -1,7 +1,47 @@
+import { createContext, useContext } from 'react';
 import { CategoryId } from './types';
 
-/** Soft, Morandi-inspired palette taken from the reference design. */
-export const COLORS = {
+export type ThemeId = 'cream' | 'dusk' | 'caramel' | 'night';
+
+/** Every colour token the UI chrome needs. Each theme provides a full set. */
+export interface Palette {
+  id: ThemeId;
+  label: string;
+  isDark: boolean;
+  bg: string;
+  bgAlt: string;
+  sheet: string;
+  card: string;
+  inputBg: string;
+  ink: string;
+  muted: string;
+  muted2: string;
+  muted3: string;
+  gold: string;
+  divider: string;
+  border: string;
+  accent: string;
+  accentInk: string;
+  accentSoft: string;
+  weekend: string;
+  /** floating action button background */
+  fab: string;
+  scrim: string;
+  /** "r,g,b" base for the heatmap green */
+  heatRGB: string;
+  heatEmpty: string;
+  heatDayStrong: string;
+  heatDaySoft: string;
+  heatCountStrong: string;
+  heatCountSoft: string;
+  /** four representative dots shown on the theme selector */
+  swatch: [string, string, string, string];
+}
+
+const cream: Palette = {
+  id: 'cream',
+  label: '奶白',
+  isDark: false,
   bg: '#F1ECE2',
   bgAlt: '#F6F3EC',
   sheet: '#FBF9F4',
@@ -18,18 +58,145 @@ export const COLORS = {
   accentInk: '#5E7257',
   accentSoft: '#E9EEE6',
   weekend: '#C9A9A0',
-  heatEmpty: '#ECE8E0',
+  fab: '#4A4540',
   scrim: 'rgba(60,55,50,0.34)',
+  heatRGB: '168,181,162',
+  heatEmpty: '#ECE8E0',
+  heatDayStrong: '#4F5A48',
+  heatDaySoft: '#7A8270',
+  heatCountStrong: '#3F4A39',
+  heatCountSoft: '#6B7361',
+  swatch: ['#9FB0BE', '#A8B5A2', '#C9A9A0', '#C2B49C'],
 };
+
+const dusk: Palette = {
+  id: 'dusk',
+  label: '暮山黛',
+  isDark: false,
+  bg: '#EFF0F3',
+  bgAlt: '#F3F4F6',
+  sheet: '#FBFBFD',
+  card: '#FFFFFF',
+  inputBg: '#E9EBF0',
+  ink: '#3C4250',
+  muted: '#7E828F',
+  muted2: '#888C99',
+  muted3: '#9A9DAA',
+  gold: '#A6AAB6',
+  divider: '#DEE1E7',
+  border: '#E2E4EA',
+  accent: '#8FB0A4',
+  accentInk: '#4F6E62',
+  accentSoft: '#E5EEEA',
+  weekend: '#C39A93',
+  fab: '#3C4250',
+  scrim: 'rgba(40,44,56,0.40)',
+  heatRGB: '143,176,164',
+  heatEmpty: '#E7E9ED',
+  heatDayStrong: '#34433B',
+  heatDaySoft: '#5F7268',
+  heatCountStrong: '#34433B',
+  heatCountSoft: '#5F7268',
+  swatch: ['#8AA0B8', '#8FB0A4', '#C39A93', '#A6A0BC'],
+};
+
+const caramel: Palette = {
+  id: 'caramel',
+  label: '焦糖陶',
+  isDark: false,
+  bg: '#F6F0E7',
+  bgAlt: '#F8F2E9',
+  sheet: '#FCF8F1',
+  card: '#FFFFFF',
+  inputBg: '#F0E8DA',
+  ink: '#4A3E34',
+  muted: '#8A7C6B',
+  muted2: '#978876',
+  muted3: '#A2917D',
+  gold: '#B0A189',
+  divider: '#E4DCCD',
+  border: '#EAE1D2',
+  accent: '#A3A878',
+  accentInk: '#6E7345',
+  accentSoft: '#ECEDDC',
+  weekend: '#C77B5E',
+  fab: '#4A3E34',
+  scrim: 'rgba(60,48,36,0.36)',
+  heatRGB: '163,168,120',
+  heatEmpty: '#ECE5D9',
+  heatDayStrong: '#46472C',
+  heatDaySoft: '#6E7345',
+  heatCountStrong: '#46472C',
+  heatCountSoft: '#6E7345',
+  swatch: ['#B98C6D', '#A3A878', '#C77B5E', '#CBA869'],
+};
+
+const night: Palette = {
+  id: 'night',
+  label: '夜墨霓',
+  isDark: true,
+  bg: '#211F29',
+  bgAlt: '#25232E',
+  sheet: '#2A2734',
+  card: '#2F2C3A',
+  inputBg: '#2E2B38',
+  ink: '#ECEAF2',
+  muted: '#A6A2B4',
+  muted2: '#9C98AA',
+  muted3: '#8E8A9C',
+  gold: '#827E90',
+  divider: '#383544',
+  border: '#383544',
+  accent: '#6FB0A0',
+  accentInk: '#93D0BE',
+  accentSoft: '#28342E',
+  weekend: '#C98A86',
+  fab: '#6FB0A0',
+  scrim: 'rgba(0,0,0,0.55)',
+  heatRGB: '111,176,160',
+  heatEmpty: '#2E2B38',
+  heatDayStrong: '#10302A',
+  heatDaySoft: '#C8E6DC',
+  heatCountStrong: '#0C2620',
+  heatCountSoft: '#C8E6DC',
+  swatch: ['#6E8FB8', '#6FB0A0', '#C98A86', '#BFA3DE'],
+};
+
+export const THEMES: Record<ThemeId, Palette> = { cream, dusk, caramel, night };
+export const THEME_LIST: Palette[] = [cream, dusk, caramel, night];
+
+/** Back-compat default palette (cream). */
+export const COLORS = cream;
+
+const ThemeContext = createContext<Palette>(cream);
+export const ThemeProvider = ThemeContext.Provider;
+export function useTheme(): Palette {
+  return useContext(ThemeContext);
+}
+
+/** Heatmap cell colour for an occurrence count, using the active palette. */
+export function heatColor(c: Palette, count: number): string {
+  if (count <= 0) return c.heatEmpty;
+  const alpha = count >= 5 ? 1 : [0, 0.28, 0.48, 0.68, 0.86][count];
+  return `rgba(${c.heatRGB},${alpha})`;
+}
+
+/** Heatmap legend swatches (light → dark) for the active palette. */
+export function heatLegend(c: Palette): string[] {
+  return [
+    c.heatEmpty,
+    `rgba(${c.heatRGB},0.28)`,
+    `rgba(${c.heatRGB},0.48)`,
+    `rgba(${c.heatRGB},0.68)`,
+    `rgba(${c.heatRGB},1)`,
+  ];
+}
 
 export interface Category {
   id: CategoryId;
   label: string;
-  /** small dot / accent colour */
   dot: string;
-  /** label text colour */
   text: string;
-  /** soft tinted background for cloud pills */
   soft: string;
 }
 
@@ -42,7 +209,6 @@ export const DEFAULT_TAGS: Category[] = [
 
 export const CATEGORIES: Category[] = DEFAULT_TAGS;
 
-/** Fixed display order for category summaries (matches the reference design). */
 export const CATEGORY_ORDER: CategoryId[] = ['life', 'work', 'fun', 'sport'];
 
 export const CATEGORY_MAP: Record<CategoryId, Category> = CATEGORIES.reduce(
@@ -52,19 +218,3 @@ export const CATEGORY_MAP: Record<CategoryId, Category> = CATEGORIES.reduce(
   },
   {} as Record<CategoryId, Category>,
 );
-
-/** Heatmap colour for an occurrence count (fixed buckets, matching the design). */
-export function heatColor(count: number): string {
-  if (count <= 0) return COLORS.heatEmpty;
-  const alpha = count >= 5 ? 1 : [0, 0.28, 0.48, 0.68, 0.86][count];
-  return `rgba(168,181,162,${alpha})`;
-}
-
-/** Heatmap legend swatches, light → dark. */
-export const HEAT_LEGEND = [
-  COLORS.heatEmpty,
-  'rgba(168,181,162,0.28)',
-  'rgba(168,181,162,0.48)',
-  'rgba(168,181,162,0.68)',
-  'rgba(168,181,162,1)',
-];

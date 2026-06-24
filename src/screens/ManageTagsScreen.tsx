@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { COLORS } from '../theme';
+import { Palette, useTheme } from '../theme';
 import { Activity, ActivityItem, ActivityTag } from '../types';
 
 interface Props {
@@ -24,6 +24,8 @@ const PALETTE = [
 
 export default function ManageTagsScreen({ tags, items, activities, onChangeTags, onBack }: Props) {
   const insets = useSafeAreaInsets();
+  const c = useTheme();
+  const styles = useMemo(() => createStyles(c), [c]);
   const [label, setLabel] = useState('');
   const [paletteIndex, setPaletteIndex] = useState(0);
   const [editingId, setEditingId] = useState<ActivityTag['id'] | null>(null);
@@ -87,7 +89,7 @@ export default function ManageTagsScreen({ tags, items, activities, onChangeTags
             value={label}
             onChangeText={setLabel}
             placeholder="新增标签名称"
-            placeholderTextColor={COLORS.muted3}
+            placeholderTextColor={c.muted3}
             maxLength={12}
           />
           <View style={styles.palette}>
@@ -167,60 +169,60 @@ export default function ManageTagsScreen({ tags, items, activities, onChangeTags
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: COLORS.bgAlt, paddingHorizontal: 20 },
+const createStyles = (c: Palette) => StyleSheet.create({
+  root: { flex: 1, backgroundColor: c.bgAlt, paddingHorizontal: 20 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   backBtn: {
     width: 34,
     height: 34,
     borderRadius: 999,
-    backgroundColor: COLORS.card,
+    backgroundColor: c.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  backIcon: { fontSize: 20, color: COLORS.muted, marginTop: -2 },
+  backIcon: { fontSize: 20, color: c.muted, marginTop: -2 },
   titleBlock: { flex: 1, gap: 2 },
-  title: { fontSize: 22, fontWeight: '800', color: COLORS.ink, lineHeight: 25 },
-  subtitle: { fontSize: 11.5, fontWeight: '600', color: COLORS.muted3 },
-  form: { marginTop: 20, backgroundColor: COLORS.card, borderRadius: 18, padding: 15, gap: 12 },
+  title: { fontSize: 22, fontWeight: '800', color: c.ink, lineHeight: 25 },
+  subtitle: { fontSize: 11.5, fontWeight: '600', color: c.muted3 },
+  form: { marginTop: 20, backgroundColor: c.card, borderRadius: 18, padding: 15, gap: 12 },
   input: {
-    backgroundColor: COLORS.inputBg,
+    backgroundColor: c.inputBg,
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    color: COLORS.ink,
+    color: c.ink,
     fontSize: 14,
     fontWeight: '600',
   },
   palette: { flexDirection: 'row', gap: 10 },
   swatch: { width: 30, height: 30, borderRadius: 999, borderWidth: 3, borderColor: 'transparent' },
-  swatchActive: { borderColor: COLORS.ink },
-  primaryButton: { backgroundColor: COLORS.accent, borderRadius: 15, paddingVertical: 13, alignItems: 'center' },
+  swatchActive: { borderColor: c.ink },
+  primaryButton: { backgroundColor: c.accent, borderRadius: 15, paddingVertical: 13, alignItems: 'center' },
   disabled: { opacity: 0.42 },
   primaryText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800', letterSpacing: 1 },
-  list: { marginTop: 14, backgroundColor: COLORS.card, borderRadius: 18, paddingHorizontal: 14 },
+  list: { marginTop: 14, backgroundColor: c.card, borderRadius: 18, paddingHorizontal: 14 },
   tagRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 9,
     paddingVertical: 13,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.inputBg,
+    borderBottomColor: c.inputBg,
   },
   dot: { width: 9, height: 9, borderRadius: 999 },
   tagTextBlock: { flex: 1, gap: 3 },
-  tagLabel: { fontSize: 14, fontWeight: '800', color: COLORS.ink },
-  tagHint: { fontSize: 11, fontWeight: '700', color: COLORS.muted3 },
+  tagLabel: { fontSize: 14, fontWeight: '800', color: c.ink },
+  tagHint: { fontSize: 11, fontWeight: '700', color: c.muted3 },
   editInput: {
     flex: 1,
-    backgroundColor: COLORS.inputBg,
+    backgroundColor: c.inputBg,
     borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 7,
-    color: COLORS.ink,
+    color: c.ink,
     fontWeight: '700',
   },
-  smallButton: { paddingHorizontal: 8, paddingVertical: 6, borderRadius: 999, backgroundColor: COLORS.inputBg },
-  smallButtonText: { fontSize: 11, fontWeight: '800', color: COLORS.muted },
+  smallButton: { paddingHorizontal: 8, paddingVertical: 6, borderRadius: 999, backgroundColor: c.inputBg },
+  smallButtonText: { fontSize: 11, fontWeight: '800', color: c.muted },
   deleteText: { fontSize: 11, fontWeight: '800', color: '#9B6E64' },
 });

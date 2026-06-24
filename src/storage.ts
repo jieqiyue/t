@@ -1,12 +1,35 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { DEFAULT_TAGS } from './theme';
-import { Activity, ActivityItem, ActivityOverviewStyle, ActivityTag, CategoryId } from './types';
+import { DEFAULT_TAGS, ThemeId } from './theme';
+import {
+  Activity,
+  ActivityItem,
+  ActivityOverviewStyle,
+  ActivityTag,
+  CategoryId,
+  MoodId,
+  WeatherId,
+} from './types';
 
 const KEY = 'dal.activities.v1';
 const SEED_FLAG = 'dal.seeded.v1';
 const OVERVIEW_STYLE_KEY = 'dal.activityOverviewStyle.v1';
 const TAGS_KEY = 'dal.tags.v1';
 const ITEMS_KEY = 'dal.activityItems.v1';
+const THEME_KEY = 'dal.theme.v1';
+
+export async function loadThemeId(): Promise<ThemeId> {
+  try {
+    const raw = await AsyncStorage.getItem(THEME_KEY);
+    if (raw === 'cream' || raw === 'dusk' || raw === 'caramel' || raw === 'night') return raw;
+  } catch (e) {
+    // fall through
+  }
+  return 'cream';
+}
+
+export async function saveThemeId(id: ThemeId): Promise<void> {
+  await AsyncStorage.setItem(THEME_KEY, id);
+}
 
 export async function loadActivities(): Promise<Activity[]> {
   try {
@@ -81,6 +104,17 @@ export async function saveActivityOverviewStyle(style: ActivityOverviewStyle): P
   await AsyncStorage.setItem(OVERVIEW_STYLE_KEY, style);
 }
 
+export async function clearAllData(): Promise<void> {
+  await AsyncStorage.multiRemove([
+    KEY,
+    SEED_FLAG,
+    OVERVIEW_STYLE_KEY,
+    TAGS_KEY,
+    ITEMS_KEY,
+    THEME_KEY,
+  ]);
+}
+
 let counter = 0;
 function newId(): string {
   counter += 1;
@@ -96,8 +130,9 @@ function push(
   title: string,
   category: CategoryId,
   ts: number,
+  extra?: { note?: string; mood?: MoodId; weather?: WeatherId },
 ) {
-  list.push({ id: newId(), title, category, tagId: category, timestamp: ts });
+  list.push({ id: newId(), title, category, tagId: category, timestamp: ts, ...extra });
 }
 
 function buildItemsFromActivities(activities: Activity[]): ActivityItem[] {
@@ -152,12 +187,32 @@ function buildSeed(): Activity[] {
     }
   }
 
-  // Today — mirrors the reference Timeline screen.
-  push(list, '晨跑五公里', 'sport', at(y, mo, today, 7, 30));
-  push(list, '喝了一大杯温水', 'life', at(y, mo, today, 8, 10));
-  push(list, '完成季度方案初稿', 'work', at(y, mo, today, 9, 40));
-  push(list, '和朋友吃了顿好的午饭', 'life', at(y, mo, today, 12, 30));
-  push(list, '看了一部老电影', 'fun', at(y, mo, today, 20, 10));
+  // Today — mirrors the reference Timeline screen, with mood / weather / notes.
+  push(list, '晨跑五公里', 'sport', at(y, mo, today, 7, 30), {
+    note: '六公里，比昨天快了两分钟，状态非常好。',
+    mood: 'good',
+    weather: 'sunny',
+  });
+  push(list, '喝了一大杯温水', 'life', at(y, mo, today, 8, 10), {
+    note: '起床第一件事，对肠胃很温柔。',
+    mood: 'ok',
+    weather: 'cloudy',
+  });
+  push(list, '完成季度方案初稿', 'work', at(y, mo, today, 9, 40), {
+    note: '写了一上午，终于把框架定下来了。',
+    mood: 'good',
+    weather: 'sunny',
+  });
+  push(list, '和朋友吃了顿好的午饭', 'life', at(y, mo, today, 12, 30), {
+    note: '好久不见的老同学，聊了好多近况。',
+    mood: 'great',
+    weather: 'sunny',
+  });
+  push(list, '看了一部老电影', 'fun', at(y, mo, today, 20, 10), {
+    note: '重温《海上钢琴师》，还是很感动。',
+    mood: 'great',
+    weather: 'rain',
+  });
 
   return list;
 }

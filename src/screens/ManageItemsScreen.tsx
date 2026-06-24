@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { COLORS } from '../theme';
+import { Palette, useTheme } from '../theme';
 import { ActivityItem, ActivityTag } from '../types';
 
 interface Props {
@@ -9,11 +9,21 @@ interface Props {
   tags: ActivityTag[];
   onChangeItems: (items: ActivityItem[]) => void;
   onDeleteItem: (item: ActivityItem) => void;
+  onOpenStats: (title: string) => void;
   onBack: () => void;
 }
 
-export default function ManageItemsScreen({ items, tags, onChangeItems, onDeleteItem, onBack }: Props) {
+export default function ManageItemsScreen({
+  items,
+  tags,
+  onChangeItems,
+  onDeleteItem,
+  onOpenStats,
+  onBack,
+}: Props) {
   const insets = useSafeAreaInsets();
+  const c = useTheme();
+  const styles = useMemo(() => createStyles(c), [c]);
   const [title, setTitle] = useState('');
   const [tagId, setTagId] = useState(() => tags[0]?.id || 'life');
   const [pendingArchive, setPendingArchive] = useState<ActivityItem | null>(null);
@@ -86,7 +96,7 @@ export default function ManageItemsScreen({ items, tags, onChangeItems, onDelete
             value={title}
             onChangeText={setTitle}
             placeholder="新增一个常做事件"
-            placeholderTextColor={COLORS.muted3}
+            placeholderTextColor={c.muted3}
             maxLength={40}
           />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tagRow}>
@@ -118,10 +128,10 @@ export default function ManageItemsScreen({ items, tags, onChangeItems, onDelete
             const tag = tags.find((candidate) => candidate.id === item.tagId) || tags[0];
             return (
               <View key={item.id} style={styles.itemRow}>
-                <View style={[styles.dot, { backgroundColor: tag?.dot || COLORS.accent }]} />
+                <View style={[styles.dot, { backgroundColor: tag?.dot || c.accent }]} />
                 <View style={styles.itemText}>
                   <Text style={[styles.itemTitle, item.archived && styles.archived]}>{item.title}</Text>
-                  <Text style={[styles.itemTag, { color: tag?.text || COLORS.accentInk }]}>
+                  <Text style={[styles.itemTag, { color: tag?.text || c.accentInk }]}>
                     {tag?.label || '标签'}{item.archived ? ' · 已归档' : ''}
                   </Text>
                 </View>
@@ -195,28 +205,28 @@ export default function ManageItemsScreen({ items, tags, onChangeItems, onDelete
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: COLORS.bgAlt, paddingHorizontal: 20 },
+const createStyles = (c: Palette) => StyleSheet.create({
+  root: { flex: 1, backgroundColor: c.bgAlt, paddingHorizontal: 20 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   backBtn: {
     width: 34,
     height: 34,
     borderRadius: 999,
-    backgroundColor: COLORS.card,
+    backgroundColor: c.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  backIcon: { fontSize: 20, color: COLORS.muted, marginTop: -2 },
+  backIcon: { fontSize: 20, color: c.muted, marginTop: -2 },
   titleBlock: { flex: 1, gap: 2 },
-  title: { fontSize: 22, fontWeight: '800', color: COLORS.ink, lineHeight: 25 },
-  subtitle: { fontSize: 11.5, fontWeight: '600', color: COLORS.muted3 },
-  form: { marginTop: 20, backgroundColor: COLORS.card, borderRadius: 18, padding: 15, gap: 12 },
+  title: { fontSize: 22, fontWeight: '800', color: c.ink, lineHeight: 25 },
+  subtitle: { fontSize: 11.5, fontWeight: '600', color: c.muted3 },
+  form: { marginTop: 20, backgroundColor: c.card, borderRadius: 18, padding: 15, gap: 12 },
   input: {
-    backgroundColor: COLORS.inputBg,
+    backgroundColor: c.inputBg,
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    color: COLORS.ink,
+    color: c.ink,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -225,34 +235,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: COLORS.card,
+    backgroundColor: c.card,
     borderWidth: 1.5,
-    borderColor: COLORS.border,
+    borderColor: c.border,
     paddingHorizontal: 13,
     paddingVertical: 7,
     borderRadius: 999,
   },
-  tagText: { fontSize: 12, fontWeight: '700', color: COLORS.muted },
+  tagText: { fontSize: 12, fontWeight: '700', color: c.muted },
   tagTextActive: { color: '#FFFFFF', fontWeight: '800' },
   dot: { width: 8, height: 8, borderRadius: 999 },
-  primaryButton: { backgroundColor: COLORS.accent, borderRadius: 15, paddingVertical: 13, alignItems: 'center' },
+  primaryButton: { backgroundColor: c.accent, borderRadius: 15, paddingVertical: 13, alignItems: 'center' },
   disabled: { opacity: 0.45 },
   primaryText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800', letterSpacing: 1 },
-  list: { marginTop: 14, backgroundColor: COLORS.card, borderRadius: 18, paddingHorizontal: 14 },
+  list: { marginTop: 14, backgroundColor: c.card, borderRadius: 18, paddingHorizontal: 14 },
   itemRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 9,
     paddingVertical: 13,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.inputBg,
+    borderBottomColor: c.inputBg,
   },
   itemText: { flex: 1, minWidth: 0, gap: 3 },
-  itemTitle: { fontSize: 14, fontWeight: '800', color: COLORS.ink },
-  archived: { color: COLORS.muted3, textDecorationLine: 'line-through' },
+  itemTitle: { fontSize: 14, fontWeight: '800', color: c.ink },
+  archived: { color: c.muted3, textDecorationLine: 'line-through' },
   itemTag: { fontSize: 11, fontWeight: '800' },
-  smallButton: { paddingHorizontal: 8, paddingVertical: 6, borderRadius: 999, backgroundColor: COLORS.inputBg },
-  smallButtonText: { fontSize: 11, fontWeight: '800', color: COLORS.muted },
+  smallButton: { paddingHorizontal: 8, paddingVertical: 6, borderRadius: 999, backgroundColor: c.inputBg },
+  smallButtonText: { fontSize: 11, fontWeight: '800', color: c.muted },
   deleteText: { fontSize: 11, fontWeight: '800', color: '#9B6E64' },
   confirmOverlay: {
     position: 'absolute',
@@ -270,27 +280,27 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     left: 0,
-    backgroundColor: COLORS.scrim,
+    backgroundColor: c.scrim,
   },
   confirmCard: {
     width: '100%',
     borderRadius: 20,
-    backgroundColor: COLORS.sheet,
+    backgroundColor: c.sheet,
     padding: 18,
     gap: 12,
-    shadowColor: COLORS.ink,
+    shadowColor: c.ink,
     shadowOffset: { width: 0, height: 14 },
     shadowOpacity: 0.18,
     shadowRadius: 28,
     elevation: 18,
   },
-  confirmTitle: { fontSize: 18, fontWeight: '800', color: COLORS.ink },
-  confirmBody: { fontSize: 13, fontWeight: '500', color: COLORS.muted, lineHeight: 20 },
+  confirmTitle: { fontSize: 18, fontWeight: '800', color: c.ink },
+  confirmBody: { fontSize: 13, fontWeight: '500', color: c.muted, lineHeight: 20 },
   confirmActions: { flexDirection: 'row', gap: 10, marginTop: 4 },
   confirmButton: { flex: 1, alignItems: 'center', borderRadius: 14, paddingVertical: 12 },
-  cancelButton: { backgroundColor: COLORS.inputBg },
+  cancelButton: { backgroundColor: c.inputBg },
   archiveButton: { backgroundColor: '#C9A9A0' },
   deleteButton: { backgroundColor: '#9B6E64' },
-  cancelText: { fontSize: 14, fontWeight: '800', color: COLORS.muted },
+  cancelText: { fontSize: 14, fontWeight: '800', color: c.muted },
   archiveText: { fontSize: 14, fontWeight: '800', color: '#FFFFFF' },
 });

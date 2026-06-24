@@ -15,10 +15,13 @@ import {
   loadActivityItems,
   loadActivityOverviewStyle,
   loadTags,
+  loadThemeId,
+  clearAllData,
   saveActivities,
   saveActivityItems,
   saveActivityOverviewStyle,
   saveTags,
+  saveThemeId,
 } from './src/storage';
 import {
   Activity,
@@ -28,7 +31,7 @@ import {
   CategoryId,
   NewRecordInput,
 } from './src/types';
-import { COLORS } from './src/theme';
+import { THEMES, ThemeId, ThemeProvider } from './src/theme';
 import { isSameDay } from './src/dateUtils';
 
 /**
@@ -56,7 +59,7 @@ type Route =
   | { name: 'settings'; from: 'timeline' | 'activities' }
   | { name: 'manageItems' }
   | { name: 'manageTags' }
-  | { name: 'stats'; title: string };
+  | { name: 'stats'; title: string; from: 'timeline' | 'activities' | 'manageItems' };
 
 export default function App() {
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -68,16 +71,21 @@ export default function App() {
   const [items, setItems] = useState<ActivityItem[]>([]);
   const [settingsFrom, setSettingsFrom] = useState<'timeline' | 'activities'>('timeline');
   const [justRecorded, setJustRecorded] = useState<Activity | null>(null);
+  const [themeId, setThemeId] = useState<ThemeId>('cream');
+  const theme = THEMES[themeId];
 
   useEffect(() => {
-    Promise.all([loadActivities(), loadActivityOverviewStyle(), loadTags()]).then(async ([list, style, tagList]) => {
-      const itemList = await loadActivityItems(list);
-      setActivities(list);
-      setOverviewStyle(style);
-      setTags(tagList);
-      setItems(itemList);
-      setLoading(false);
-    });
+    Promise.all([loadActivities(), loadActivityOverviewStyle(), loadTags(), loadThemeId()]).then(
+      async ([list, style, tagList, tId]) => {
+        const itemList = await loadActivityItems(list);
+        setActivities(list);
+        setOverviewStyle(style);
+        setTags(tagList);
+        setItems(itemList);
+        setThemeId(tId);
+        setLoading(false);
+      },
+    );
   }, []);
 
   // Persist on change, skipping the redundant write right after hydration.
@@ -85,6 +93,7 @@ export default function App() {
   usePersist(overviewStyle, !loading, saveActivityOverviewStyle);
   usePersist(tags, !loading, saveTags);
   usePersist(items, !loading, saveActivityItems);
+  usePersist(themeId, !loading, saveThemeId);
 
   // Android hardware back: close sheet, or return to the timeline.
   useEffect(() => {
@@ -96,6 +105,16 @@ export default function App() {
       }
       if (sheetOpen) {
         setSheetOpen(false);
+        return true;
+      }
+      if (route.name === 'stats') {
+        setRoute(
+          route.from === 'activities'
+            ? { name: 'activities' }
+            : route.from === 'manageItems'
+            ? { name: 'manageItems' }
+            : { name: 'timeline' },
+        );
         return true;
       }
       if (route.name !== 'timeline') {
@@ -128,6 +147,11 @@ export default function App() {
     setJustRecorded(entry);
   }, [tags]);
 
+  // Delete a single logged record from the timeline.
+  const deleteActivity = useCallback((id: string) => {
+    setActivities((prev) => prev.filter((a) => a.id !== id));
+  }, []);
+
   // Deleting an item is destructive: drop the item AND every record it produced
   // (matched by itemId, or by title+tag for seeded/legacy records with no itemId).
   const deleteItem = useCallback((item: ActivityItem) => {
@@ -143,17 +167,30 @@ export default function App() {
     );
   }, []);
 
+  const handleClearAllData = useCallback(async () => {
+    await clearAllData();
+    setActivities([]);
+    setItems([]);
+    setTags([]);
+    setOverviewStyle('rank');
+    setThemeId('cream');
+    setSheetOpen(false);
+    setJustRecorded(null);
+    setRoute({ name: 'timeline' });
+  }, []);
+
   if (loading) {
     return (
-      <View style={styles.loader}>
-        <ActivityIndicator color={COLORS.accent} />
+      <View style={[styles.loader, { backgroundColor: theme.bg }]}>
+        <ActivityIndicator color={theme.accent} />
       </View>
     );
   }
 
   return (
     <SafeAreaProvider>
-      <StatusBar style="dark" />
+      <ThemeProvider value={theme}>
+      <StatusBar style={theme.isDark ? 'light' : 'dark'} />
       {justRecorded ? (
         <RecordDoneScreen
           activity={justRecorded}
@@ -168,13 +205,14 @@ export default function App() {
         <TimelineScreen
           activities={activities}
           tags={tags}
-          onOpenStats={(title) => setRoute({ name: 'stats', title })}
+          onOpenStats={(title) => setRoute({ name: 'stats', title, from: 'timeline' })}
           onOpenAllActivities={() => setRoute({ name: 'activities' })}
           onOpenSettings={() => {
             setSettingsFrom('timeline');
             setRoute({ name: 'settings', from: 'timeline' });
           }}
           onOpenRecord={() => setSheetOpen(true)}
+          onDeleteActivity={deleteActivity}
         />
       ) : route.name === 'activities' ? (
         <AllActivitiesScreen
@@ -186,12 +224,14 @@ export default function App() {
             setSettingsFrom('activities');
             setRoute({ name: 'settings', from: 'activities' });
           }}
-          onOpenStats={(title) => setRoute({ name: 'stats', title })}
+          onOpenStats={(title) => setRoute({ name: 'stats', title, from: 'activities' })}
         />
       ) : route.name === 'settings' ? (
         <SettingsScreen
           overviewStyle={overviewStyle}
           onChangeOverviewStyle={setOverviewStyle}
+          themeId={themeId}
+          onChangeTheme={setThemeId}
           onOpenManageItems={() => {
             setSettingsFrom(route.from);
             setRoute({ name: 'manageItems' });
@@ -200,6 +240,7 @@ export default function App() {
             setSettingsFrom(route.from);
             setRoute({ name: 'manageTags' });
           }}
+          onClearAllData={handleClearAllData}
           onBack={() =>
             setRoute(route.from === 'timeline' ? { name: 'timeline' } : { name: 'activities' })
           }
@@ -210,6 +251,7 @@ export default function App() {
           tags={tags}
           onChangeItems={setItems}
           onDeleteItem={deleteItem}
+          onOpenStats={(title) => setRoute({ name: 'stats', title, from: 'manageItems' })}
           onBack={() => setRoute({ name: 'settings', from: settingsFrom })}
         />
       ) : route.name === 'manageTags' ? (
@@ -225,7 +267,15 @@ export default function App() {
           title={route.title}
           activities={activities}
           tags={tags}
-          onBack={() => setRoute({ name: 'timeline' })}
+          onBack={() =>
+            setRoute(
+              route.from === 'activities'
+                ? { name: 'activities' }
+                : route.from === 'manageItems'
+                ? { name: 'manageItems' }
+                : { name: 'timeline' },
+            )
+          }
         />
       )}
       <QuickRecordSheet
@@ -235,10 +285,11 @@ export default function App() {
         onClose={() => setSheetOpen(false)}
         onSubmit={addActivity}
       />
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  loader: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.bg },
+  loader: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 });
