@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Palette, THEME_LIST, ThemeId, useTheme } from '../theme';
 import { ActivityOverviewStyle } from '../types';
@@ -11,6 +11,7 @@ interface Props {
   onChangeTheme: (id: ThemeId) => void;
   onOpenManageItems: () => void;
   onOpenManageTags: () => void;
+  onOpenExport: () => void;
   onClearAllData: () => void;
   onBack: () => void;
 }
@@ -27,6 +28,7 @@ export default function SettingsScreen({
   onChangeTheme,
   onOpenManageItems,
   onOpenManageTags,
+  onOpenExport,
   onClearAllData,
   onBack,
 }: Props) {
@@ -43,7 +45,15 @@ export default function SettingsScreen({
   const overviewLabel = OPTIONS.find((o) => o.id === overviewStyle)?.title ?? '';
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 24 }]}>
+    <View style={styles.root}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingHorizontal: 20,
+          paddingTop: insets.top + 8,
+          paddingBottom: insets.bottom + 28,
+        }}
+      >
       <View style={styles.header}>
         <Pressable onPress={onBack} style={styles.backBtn} hitSlop={10}>
           <Text style={styles.backIcon}>‹</Text>
@@ -68,6 +78,19 @@ export default function SettingsScreen({
             <View style={styles.optionText}>
               <Text style={styles.optionTitle}>标签管理</Text>
               <Text style={styles.optionDesc}>维护事件所属的标签和显示颜色。</Text>
+            </View>
+            <Text style={styles.navArrow}>›</Text>
+          </Pressable>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>数据</Text>
+        <View style={styles.optionCard}>
+          <Pressable onPress={onOpenExport} style={[styles.navOption, styles.optionLast]}>
+            <View style={styles.optionText}>
+              <Text style={styles.optionTitle}>导出与备份</Text>
+              <Text style={styles.optionDesc}>导出 CSV / JSON，或备份与恢复全部数据。</Text>
             </View>
             <Text style={styles.navArrow}>›</Text>
           </Pressable>
@@ -148,6 +171,7 @@ export default function SettingsScreen({
           </Pressable>
         </View>
       </View>
+      </ScrollView>
 
       {confirmClearOpen && (
         <View style={styles.confirmOverlay}>
@@ -176,7 +200,7 @@ export default function SettingsScreen({
 }
 
 const createStyles = (c: Palette) => StyleSheet.create({
-  root: { flex: 1, backgroundColor: c.bgAlt, paddingHorizontal: 20 },
+  root: { flex: 1, backgroundColor: c.bgAlt },
   header: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   backBtn: {
     width: 34,

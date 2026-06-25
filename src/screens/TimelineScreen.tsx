@@ -10,26 +10,28 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CATEGORY_MAP, Palette, useTheme } from '../theme';
 import { Activity, ActivityTag } from '../types';
 import { encouragementFor, isSameDay, longDateLabel, timeLabel } from '../dateUtils';
-import { MOOD_MAP, MoodFace, WEATHER_MAP, WeatherIcon } from '../components/moodWeather';
+import { MOOD_MAP, MoodFace, StarIcon, WEATHER_MAP, WeatherIcon } from '../components/moodWeather';
 
 interface Props {
   activities: Activity[];
   tags: ActivityTag[];
-  onOpenStats: (title: string) => void;
+  onOpenDetail: (id: string) => void;
   onOpenAllActivities: () => void;
   onOpenSettings: () => void;
   onOpenRecord: () => void;
   onDeleteActivity: (id: string) => void;
+  onOpenSummary: () => void;
 }
 
 export default function TimelineScreen({
   activities,
   tags,
-  onOpenStats,
+  onOpenDetail,
   onOpenAllActivities,
   onOpenSettings,
   onOpenRecord,
   onDeleteActivity,
+  onOpenSummary,
 }: Props) {
   const insets = useSafeAreaInsets();
   const c = useTheme();
@@ -58,6 +60,9 @@ export default function TimelineScreen({
             <Text style={styles.dateLabel}>{longDateLabel(today)}</Text>
             <Text style={styles.encourage}>{encouragementFor(today)}</Text>
           </View>
+          <Pressable onPress={onOpenSummary} style={styles.iconButton} hitSlop={10}>
+            <StarIcon color={c.muted} size={16} />
+          </Pressable>
           <Pressable onPress={onOpenSettings} style={styles.iconButton} hitSlop={10}>
             <View style={styles.moreDots}>
               <View style={styles.moreDot} />
@@ -100,7 +105,7 @@ export default function TimelineScreen({
               return (
                 <View key={a.id} style={styles.row}>
                   <Pressable
-                    onPress={() => onOpenStats(a.title)}
+                    onPress={() => onOpenDetail(a.id)}
                     style={({ pressed }) => [styles.rowMain, pressed && styles.rowPressed]}
                   >
                     <Text style={styles.time}>{timeLabel(a.timestamp)}</Text>
@@ -110,7 +115,7 @@ export default function TimelineScreen({
                     <View style={styles.rowBody}>
                       <View style={styles.rowTop}>
                         <Text style={styles.rowTitle}>{a.title}</Text>
-                        <Text style={styles.statHint}>统计 ›</Text>
+                        <Text style={styles.statHint}>详情 ›</Text>
                       </View>
                       {!!a.note && (
                         <Text style={styles.rowNote} numberOfLines={1} ellipsizeMode="tail">

@@ -25,9 +25,14 @@ interface Props {
   tags: ActivityTag[];
   onClose: () => void;
   onSubmit: (input: NewRecordInput) => void;
+  onAddItem: (title: string, tagId: ActivityTag['id']) => string;
 }
 
-export default function QuickRecordSheet({ visible, items, tags, onClose, onSubmit }: Props) {
+function defaultTagId(tags: ActivityTag[]): ActivityTag['id'] {
+  return tags.find((t) => t.id === 'life')?.id ?? tags[0]?.id ?? 'life';
+}
+
+export default function QuickRecordSheet({ visible, items, tags, onClose, onSubmit, onAddItem }: Props) {
   const insets = useSafeAreaInsets();
   const c = useTheme();
   const styles = useMemo(() => createStyles(c), [c]);
@@ -36,6 +41,9 @@ export default function QuickRecordSheet({ visible, items, tags, onClose, onSubm
   const [note, setNote] = useState('');
   const [mood, setMood] = useState<MoodId | null>(null);
   const [weather, setWeather] = useState<WeatherId | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [newTitle, setNewTitle] = useState('');
+  const [newTagId, setNewTagId] = useState<ActivityTag['id']>(() => defaultTagId(tags));
   const slide = useState(() => new Animated.Value(0))[0];
   const activeItems = items.filter((item) => !item.archived);
 
@@ -46,6 +54,9 @@ export default function QuickRecordSheet({ visible, items, tags, onClose, onSubm
       setNote('');
       setMood(null);
       setWeather(null);
+      setAdding(false);
+      setNewTitle('');
+      setNewTagId(defaultTagId(tags));
       slide.setValue(0);
       Animated.timing(slide, {
         toValue: 1,
@@ -74,6 +85,15 @@ export default function QuickRecordSheet({ visible, items, tags, onClose, onSubm
     });
   };
 
+  const confirmAdd = () => {
+    const t = newTitle.trim();
+    if (!t) return;
+    const id = onAddItem(t, newTagId);
+    setSelectedItemId(id);
+    setAdding(false);
+    setNewTitle('');
+  };
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.fill}>
@@ -99,13 +119,7 @@ export default function QuickRecordSheet({ visible, items, tags, onClose, onSubm
               <Text style={styles.subtitle}>{timeLabel(now)} · 今天</Text>
             </View>
 
-            {activeItems.length === 0 ? (
-              <View style={styles.empty}>
-                <Text style={styles.emptyTitle}>还没有可选的事件</Text>
-                <Text style={styles.emptyHint}>去「设置 → 事件管理」添加常做的事件后，就能在这里记录。</Text>
-              </View>
-            ) : (
-              <ScrollView
+            <ScrollView
                 style={styles.body}
                 contentContainerStyle={styles.bodyContent}
                 showsVerticalScrollIndicator={false}
@@ -134,7 +148,69 @@ export default function QuickRecordSheet({ visible, items, tags, onClose, onSubm
                         </Pressable>
                       );
                     })}
+                    <Pressable
+                      onPress={() => setAdding((v) => !v)}
+                      style={[styles.eventChip, styles.addChip]}
+                    >
+                      <Text style={styles.addChipText}>＋ 添加</Text>
+                    </Pressable>
                   </View>
+
+                  {activeItems.length === 0 && !adding && (
+                    <Text style={styles.eventHint}>还没有事件，点「＋ 添加」新建一个。</Text>
+                  )}
+
+                  {adding && (
+                    <View style={styles.addForm}>
+                      <TextInput
+                        style={styles.addInput}
+                        placeholder="新事件名称…"
+                        placeholderTextColor={c.muted3}
+                        value={newTitle}
+                        onChangeText={setNewTitle}
+                        autoFocus
+                        maxLength={40}
+                      />
+                      <View style={styles.wrapRow}>
+                        {tags.map((tag) => {
+                          const active = newTagId === tag.id;
+                          return (
+                            <Pressable
+                              key={tag.id}
+                              onPress={() => setNewTagId(tag.id)}
+                              style={[
+                                styles.eventChip,
+                                active && { backgroundColor: c.accent, borderColor: c.accent },
+                              ]}
+                            >
+                              {!active && <View style={[styles.eventDot, { backgroundColor: tag.dot }]} />}
+                              <Text style={[styles.eventText, active && styles.eventTextActive]}>
+                                {tag.label}
+                              </Text>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                      <View style={styles.addActions}>
+                        <Pressable
+                          onPress={() => {
+                            setAdding(false);
+                            setNewTitle('');
+                          }}
+                          style={[styles.addBtn, styles.addCancel]}
+                        >
+                          <Text style={styles.addCancelText}>取消</Text>
+                        </Pressable>
+                        <Pressable
+                          onPress={confirmAdd}
+                          disabled={!newTitle.trim()}
+                          style={[styles.addBtn, styles.addConfirm, !newTitle.trim() && styles.addConfirmDisabled]}
+                        >
+                          <Text style={styles.addConfirmText}>添加</Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                  )}
                 </View>
 
                 {/* Optional note */}
@@ -199,22 +275,19 @@ export default function QuickRecordSheet({ visible, items, tags, onClose, onSubm
                     })}
                   </View>
                 </View>
-              </ScrollView>
-            )}
+            </ScrollView>
 
-            {activeItems.length > 0 && (
-              <Pressable
-                onPress={handleSubmit}
-                disabled={!canSubmit}
-                style={({ pressed }) => [
-                  styles.submit,
-                  !canSubmit && styles.submitDisabled,
-                  pressed && canSubmit ? styles.submitPressed : null,
-                ]}
-              >
-                <Text style={styles.submitText}>记 下 来</Text>
-              </Pressable>
-            )}
+            <Pressable
+              onPress={handleSubmit}
+              disabled={!canSubmit}
+              style={({ pressed }) => [
+                styles.submit,
+                !canSubmit && styles.submitDisabled,
+                pressed && canSubmit ? styles.submitPressed : null,
+              ]}
+            >
+              <Text style={styles.submitText}>记 下 来</Text>
+            </Pressable>
           </Animated.View>
         </KeyboardAvoidingView>
       </View>
@@ -263,6 +336,26 @@ const createStyles = (c: Palette) => StyleSheet.create({
   eventDot: { width: 6, height: 6, borderRadius: 999 },
   eventText: { fontSize: 12.5, fontWeight: '700', color: c.muted },
   eventTextActive: { color: '#FFFFFF', fontWeight: '800' },
+  addChip: { backgroundColor: c.accentSoft, borderColor: c.accent },
+  addChipText: { fontSize: 12.5, fontWeight: '800', color: c.accentInk },
+  eventHint: { fontSize: 12, fontWeight: '500', color: c.muted3, lineHeight: 18 },
+  addForm: { marginTop: 4, backgroundColor: c.inputBg, borderRadius: 14, padding: 12, gap: 10 },
+  addInput: {
+    backgroundColor: c.card,
+    borderRadius: 11,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    fontWeight: '600',
+    color: c.ink,
+  },
+  addActions: { flexDirection: 'row', gap: 8 },
+  addBtn: { flex: 1, alignItems: 'center', borderRadius: 12, paddingVertical: 10 },
+  addCancel: { backgroundColor: c.card },
+  addCancelText: { fontSize: 13, fontWeight: '800', color: c.muted },
+  addConfirm: { backgroundColor: c.accent },
+  addConfirmDisabled: { opacity: 0.45 },
+  addConfirmText: { fontSize: 13, fontWeight: '800', color: '#FFFFFF' },
   input: {
     backgroundColor: c.inputBg,
     borderRadius: 15,

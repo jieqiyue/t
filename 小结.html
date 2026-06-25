@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+</style>
+</helmet>
+
+<div style="width:max-content;min-width:100%;min-height:100vh;box-sizing:border-box;padding:48px;background:#E7E3DA;font-family:'Nunito','Noto Sans SC',-apple-system,sans-serif">
+
+  <div style="max-width:680px;margin:0 auto 30px">
+    <div style="font-size:12px;font-weight:800;letter-spacing:.22em;color:#B3A998;margin-bottom:8px">DAILY ACTIVITY LOG · 小结</div>
+    <h1 style="margin:0 0 8px;font-size:30px;font-weight:800;color:#4A4540;letter-spacing:-.01em">每周 / 每月小结</h1>
+    <p style="margin:0;font-size:14px;color:#8C8275;font-weight:500">自动生成一张可分享的卡片：本周记录最多的事、心情分布、活跃天数。顶部可切换「本周 / 本月」。</p>
+  </div>
+
+  <div style="display:flex;gap:36px;align-items:flex-start;margin:0 auto;max-width:680px">
+
+    <!-- 1 · 小结页 -->
+    <div style="display:flex;flex-direction:column;gap:13px;flex:none">
+      <span style="font-size:12px;font-weight:700;color:#9A9081;letter-spacing:.03em;padding-left:8px">小结页</span>
+      <div style="width:300px;height:624px;background:#F6F3EC;border-radius:42px;box-shadow:0 22px 50px rgba(74,69,64,.16),0 6px 16px rgba(74,69,64,.06);overflow:hidden;position:relative;display:flex;flex-direction:column;flex:none;border:6px solid #fff;outline:1px solid rgba(120,110,100,.1)">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 22px 4px;flex:none">
+          <span style="font-size:13px;font-weight:800;color:#4A4540">9:41</span>
+          <div style="display:flex;align-items:center;gap:6px">
+            <div style="display:flex;align-items:flex-end;gap:1.5px;height:9px"><div style="width:2.5px;height:4px;background:#4A4540;border-radius:1px"></div><div style="width:2.5px;height:6px;background:#4A4540;border-radius:1px"></div><div style="width:2.5px;height:8px;background:#4A4540;border-radius:1px"></div><div style="width:2.5px;height:9px;background:#4A4540;border-radius:1px"></div></div>
+            <div style="width:18px;height:9px;border:1px solid rgba(74,69,64,.5);border-radius:2px;padding:1px"><div style="width:70%;height:100%;background:#4A4540;border-radius:1px"></div></div>
+          </div>
+        </div>
+        <div style="flex:1;overflow:hidden;padding:6px 18px 0;display:flex;flex-direction:column;gap:13px">
+          <div style="display:flex;align-items:center;gap:10px;padding-top:2px;padding-left:2px">
+            <div style="width:30px;height:30px;border-radius:50%;background:#fff;box-shadow:0 2px 8px rgba(74,69,64,.06);display:flex;align-items:center;justify-content:center;flex:none"><span style="font-size:17px;color:#8C8275;margin-top:-2px">‹</span></div>
+            <span style="font-size:20px;font-weight:800;color:#4A4540;line-height:1.1;flex:1">小结</span>
+            <div style="width:30px;height:30px;border-radius:50%;background:#fff;box-shadow:0 2px 8px rgba(74,69,64,.06);display:flex;align-items:center;justify-content:center;flex:none"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 14V4M12 4L8.5 7.5M12 4l3.5 3.5" stroke="#8C8275" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5" stroke="#8C8275" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+          </div>
+          <div style="display:flex;background:#EEE8DE;border-radius:12px;padding:3px;gap:2px;flex:none">
+            <span style="flex:1;text-align:center;font-size:12.5px;font-weight:800;padding:7px 0;border-radius:9px;background:#fff;color:#4A4540;box-shadow:0 1px 4px rgba(74,69,64,.08)">本周</span>
+            <span style="flex:1;text-align:center;font-size:12.5px;font-weight:700;padding:7px 0;border-radius:9px;color:#9A9081">本月</span>
+          </div>
+
+          <!-- 可分享卡片 -->
+          <div style="background:linear-gradient(160deg,#FBF9F4,#F4EFE6);border-radius:22px;padding:17px 16px;box-shadow:0 6px 20px rgba(74,69,64,.08);border:1px solid rgba(255,255,255,.7);display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <span style="font-size:10px;font-weight:800;letter-spacing:.16em;color:#B3A998">本周小结</span>
+                <span style="font-size:15px;font-weight:800;color:#4A4540">6月17日 – 6月23日</span>
+              </div>
+              <div style="width:38px;height:38px;border-radius:12px;background:#A8B5A2;display:flex;align-items:center;justify-content:center;box-shadow:0 5px 14px rgba(168,181,162,.45)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 3l2.2 5.6 6 .4-4.6 3.9 1.5 5.8L12 15.9 6.4 18.7l1.5-5.8L3.3 9l6-.4z" fill="#fff"/></svg></div>
+            </div>
+
+            <div style="display:flex;gap:9px">
+              <div style="flex:1;background:#fff;border-radius:14px;padding:11px 12px;display:flex;flex-direction:column;gap:2px">
+                <span style="font-size:25px;font-weight:800;color:#4A4540;line-height:1">6<span style="font-size:12px;color:#A89D8E;font-weight:700"> 天</span></span>
+                <span style="font-size:10.5px;font-weight:600;color:#A89D8E">活跃天数 · 共7天</span>
+              </div>
+              <div style="flex:1;background:#fff;border-radius:14px;padding:11px 12px;display:flex;flex-direction:column;gap:2px">
+                <span style="font-size:25px;font-weight:800;color:#4A4540;line-height:1">31<span style="font-size:12px;color:#A89D8E;font-weight:700"> 次</span></span>
+                <span style="font-size:10.5px;font-weight:600;color:#A89D8E">记录总数</span>
+              </div>
+            </div>
+
+            <!-- 记录最多 -->
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span style="font-size:10.5px;font-weight:800;letter-spacing:.08em;color:#B3A998">记录最多</span>
+              <div style="display:flex;align-items:center;gap:9px">
+                <div style="width:30px;height:30px;border-radius:10px;background:#E7ECEF;display:flex;align-items:center;justify-content:center;flex:none"><span style="width:11px;height:11px;border-radius:50%;background:#9FB0BE"></span></div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:4px">
+                  <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:13px;font-weight:700;color:#4A4540">番茄钟</span><span style="font-size:11px;font-weight:800;color:#5E7080">12 次</span></div>
+                  <div style="height:6px;border-radius:4px;background:#ECE6DC;overflow:hidden"><div style="width:100%;height:100%;border-radius:4px;background:#9FB0BE"></div></div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:9px">
+                <div style="width:30px;height:30px;border-radius:10px;background:#E9EEE6;display:flex;align-items:center;justify-content:center;flex:none"><span style="width:11px;height:11px;border-radius:50%;background:#A8B5A2"></span></div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:4px">
+                  <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:13px;font-weight:700;color:#4A4540">喝水</span><span style="font-size:11px;font-weight:800;color:#5E7257">9 次</span></div>
+                  <div style="height:6px;border-radius:4px;background:#ECE6DC;overflow:hidden"><div style="width:75%;height:100%;border-radius:4px;background:#A8B5A2"></div></div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:9px">
+                <div style="width:30px;height:30px;border-radius:10px;background:#F1E7E4;display:flex;align-items:center;justify-content:center;flex:none"><span style="width:11px;height:11px;border-radius:50%;background:#C9A9A0"></span></div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:4px">
+                  <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:13px;font-weight:700;color:#4A4540">晨跑</span><span style="font-size:11px;font-weight:800;color:#9B6E64">5 次</span></div>
+                  <div style="height:6px;border-radius:4px;background:#ECE6DC;overflow:hidden"><div style="width:42%;height:100%;border-radius:4px;background:#C9A9A0"></div></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 心情分布 -->
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <span style="font-size:10.5px;font-weight:800;letter-spacing:.08em;color:#B3A998">心情分布</span>
+                <span style="font-size:10.5px;font-weight:700;color:#8C8275">大多 <span style="color:#5E7257;font-weight:800">不错</span></span>
+              </div>
+              <div style="display:flex;height:13px;border-radius:7px;overflow:hidden;gap:2px">
+                <div style="width:30%;background:#8FA886"></div>
+                <div style="width:38%;background:#A8B5A2"></div>
+                <div style="width:20%;background:#C7CDB8"></div>
+                <div style="width:8%;background:#CBBBA0"></div>
+                <div style="width:4%;background:#C9A9A0"></div>
+              </div>
+              <div style="display:flex;justify-content:space-between">
+                <span style="display:inline-flex;align-items:center;gap:3px;font-size:9.5px;font-weight:600;color:#8C8275"><span style="width:7px;height:7px;border-radius:50%;background:#8FA886"></span>很好</span>
+                <span style="display:inline-flex;align-items:center;gap:3px;font-size:9.5px;font-weight:600;color:#8C8275"><span style="width:7px;height:7px;border-radius:50%;background:#A8B5A2"></span>不错</span>
+                <span style="display:inline-flex;align-items:center;gap:3px;font-size:9.5px;font-weight:600;color:#8C8275"><span style="width:7px;height:7px;border-radius:50%;background:#C7CDB8"></span>一般</span>
+                <span style="display:inline-flex;align-items:center;gap:3px;font-size:9.5px;font-weight:600;color:#8C8275"><span style="width:7px;height:7px;border-radius:50%;background:#CBBBA0"></span>低落</span>
+              </div>
+            </div>
+
+            <div style="background:#F2EEE5;border-radius:13px;padding:11px 13px">
+              <span style="font-size:11.5px;font-weight:600;color:#7E7464;line-height:1.55">这一周你很专注，也照顾好了自己的身体。继续温柔地前进吧。</span>
+            </div>
+          </div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:0;height:64px;background:linear-gradient(transparent,#F6F3EC);pointer-events:none"></div>
+        <div style="position:absolute;left:18px;right:18px;bottom:26px;background:#4A4540;border-radius:15px;padding:13px;text-align:center;box-shadow:0 10px 24px rgba(74,69,64,.32);display:flex;align-items:center;justify-content:center;gap:7px;z-index:5"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 14V4M12 4L8.5 7.5M12 4l3.5 3.5" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5" stroke="#fff" stroke-width="1.9" stroke-linecap="round"/></svg><span style="color:#fff;font-size:14px;font-weight:800;letter-spacing:.04em">分享这张卡片</span></div>
+        <div style="position:absolute;bottom:9px;left:50%;transform:translateX(-50%);width:108px;height:4px;border-radius:999px;background:rgba(74,69,64,.16)"></div>
+      </div>
+    </div>
+
+    <!-- 2 · 分享页 -->
+    <div style="display:flex;flex-direction:column;gap:13px;flex:none">
+      <span style="font-size:12px;font-weight:700;color:#9A9081;letter-spacing:.03em;padding-left:8px">分享</span>
+      <div style="width:300px;height:624px;background:#F6F3EC;border-radius:42px;box-shadow:0 22px 50px rgba(74,69,64,.16),0 6px 16px rgba(74,69,64,.06);overflow:hidden;position:relative;display:flex;flex-direction:column;flex:none;border:6px solid #fff;outline:1px solid rgba(120,110,100,.1)">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 22px 4px;flex:none">
+          <span style="font-size:13px;font-weight:800;color:#4A4540">9:41</span>
+          <div style="display:flex;align-items:center;gap:6px">
+            <div style="display:flex;align-items:flex-end;gap:1.5px;height:9px"><div style="width:2.5px;height:4px;background:#4A4540;border-radius:1px"></div><div style="width:2.5px;height:6px;background:#4A4540;border-radius:1px"></div><div style="width:2.5px;height:8px;background:#4A4540;border-radius:1px"></div><div style="width:2.5px;height:9px;background:#4A4540;border-radius:1px"></div></div>
+            <div style="width:18px;height:9px;border:1px solid rgba(74,69,64,.5);border-radius:2px;padding:1px"><div style="width:70%;height:100%;background:#4A4540;border-radius:1px"></div></div>
+          </div>
+        </div>
+        <div style="flex:1;position:relative;overflow:hidden">
+          <!-- 背景预览 -->
+          <div style="position:absolute;inset:0;padding:14px 26px;opacity:.5;filter:blur(2px);display:flex;flex-direction:column;gap:12px">
+            <div style="background:linear-gradient(160deg,#FBF9F4,#F0EAE0);border-radius:20px;height:340px;box-shadow:0 6px 20px rgba(74,69,64,.1)"></div>
+          </div>
+          <div style="position:absolute;inset:0;background:rgba(60,55,50,.4)"></div>
+          <!-- 卡片缩略 -->
+          <div style="position:absolute;left:50%;top:30px;transform:translateX(-50%);width:200px;background:linear-gradient(160deg,#FBF9F4,#F2ECE2);border-radius:18px;padding:14px;box-shadow:0 16px 40px rgba(40,36,32,.32);display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:center;justify-content:space-between"><div style="display:flex;flex-direction:column;gap:1px"><span style="font-size:8px;font-weight:800;letter-spacing:.14em;color:#B3A998">本周小结</span><span style="font-size:11px;font-weight:800;color:#4A4540">6/17 – 6/23</span></div><div style="width:26px;height:26px;border-radius:9px;background:#A8B5A2;display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 3l2.2 5.6 6 .4-4.6 3.9 1.5 5.8L12 15.9 6.4 18.7l1.5-5.8L3.3 9l6-.4z" fill="#fff"/></svg></div></div>
+            <div style="display:flex;gap:6px"><div style="flex:1;background:#fff;border-radius:9px;padding:7px 8px"><div style="font-size:16px;font-weight:800;color:#4A4540;line-height:1">6<span style="font-size:8px;color:#A89D8E"> 天</span></div><div style="font-size:7.5px;color:#A89D8E;font-weight:600">活跃</div></div><div style="flex:1;background:#fff;border-radius:9px;padding:7px 8px"><div style="font-size:16px;font-weight:800;color:#4A4540;line-height:1">31<span style="font-size:8px;color:#A89D8E"> 次</span></div><div style="font-size:7.5px;color:#A89D8E;font-weight:600">记录</div></div></div>
+            <div style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:#9FB0BE"></span><span style="flex:1;font-size:10px;font-weight:700;color:#4A4540">番茄钟</span><span style="font-size:9px;font-weight:800;color:#5E7080">12次</span></div>
+            <div style="display:flex;height:9px;border-radius:5px;overflow:hidden;gap:1.5px"><div style="width:30%;background:#8FA886"></div><div style="width:38%;background:#A8B5A2"></div><div style="width:20%;background:#C7CDB8"></div><div style="width:12%;background:#CBBBA0"></div></div>
+            <div style="display:flex;align-items:center;gap:4px;justify-content:center;margin-top:1px"><span style="width:9px;height:9px;border-radius:2px;background:#A8B5A2"></span><span style="font-size:7.5px;font-weight:700;color:#B3A998;letter-spacing:.05em">每日事件记录器</span></div>
+          </div>
+          <!-- 分享面板 -->
+          <div style="position:absolute;left:0;right:0;bottom:0;background:#FBF9F4;border-radius:28px 28px 0 0;padding:14px 20px 20px;box-shadow:0 -12px 44px rgba(50,46,42,.22);display:flex;flex-direction:column;gap:15px">
+            <div style="width:38px;height:4px;border-radius:999px;background:#DAD3C7;align-self:center"></div>
+            <span style="font-size:16px;font-weight:800;color:#4A4540">分享小结</span>
+            <div style="display:flex;justify-content:space-between;padding:0 4px">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:50px;height:50px;border-radius:16px;background:#E9EEE6;display:flex;align-items:center;justify-content:center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M16 8a4 4 0 1 1-8 0M4 20a8 8 0 0 1 16 0" stroke="#5E7257" stroke-width="1.8" stroke-linecap="round"/></svg></div><span style="font-size:10px;font-weight:600;color:#8C8275">好友</span></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:50px;height:50px;border-radius:16px;background:#E7ECEF;display:flex;align-items:center;justify-content:center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="#5E7080" stroke-width="1.8"/><path d="M3.5 12h17M12 3.5c2.5 2.5 2.5 14 0 17M12 3.5c-2.5 2.5-2.5 14 0 17" stroke="#5E7080" stroke-width="1.6"/></svg></div><span style="font-size:10px;font-weight:600;color:#8C8275">动态</span></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:50px;height:50px;border-radius:16px;background:#F4EFE0;display:flex;align-items:center;justify-content:center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="4" stroke="#897B5E" stroke-width="1.8"/><circle cx="12" cy="12" r="3.5" stroke="#897B5E" stroke-width="1.8"/><circle cx="16.5" cy="7.5" r="1.1" fill="#897B5E"/></svg></div><span style="font-size:10px;font-weight:600;color:#8C8275">相册</span></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:50px;height:50px;border-radius:16px;background:#F1E7E4;display:flex;align-items:center;justify-content:center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M8 12h8M14 8l4 4-4 4" stroke="#9B6E64" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 4v16" stroke="#9B6E64" stroke-width="1.8" stroke-linecap="round"/></svg></div><span style="font-size:10px;font-weight:600;color:#8C8275">更多</span></div>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:1px">
+              <div style="flex:1;background:#F2EEE5;border-radius:14px;padding:13px;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 14V4M12 4L8.5 7.5M12 4l3.5 3.5" stroke="#8C8275" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5" stroke="#8C8275" stroke-width="1.8" stroke-linecap="round"/></svg><span style="font-size:13.5px;font-weight:800;color:#4A4540">保存图片</span></div>
+              <div style="flex:none;width:88px;background:#fff;border:1.5px solid #ECE6DC;border-radius:14px;padding:13px;text-align:center"><span style="font-size:13.5px;font-weight:700;color:#8C8275">取消</span></div>
+            </div>
+          </div>
+        </div>
+        <div style="position:absolute;bottom:9px;left:50%;transform:translateX(-50%);width:108px;height:4px;border-radius:999px;background:rgba(74,69,64,.16);z-index:6"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

@@ -9,7 +9,11 @@ import SettingsScreen from './src/screens/SettingsScreen';
 import ManageItemsScreen from './src/screens/ManageItemsScreen';
 import ManageTagsScreen from './src/screens/ManageTagsScreen';
 import RecordDoneScreen from './src/screens/RecordDoneScreen';
+import SummaryScreen from './src/screens/SummaryScreen';
+import ExportScreen from './src/screens/ExportScreen';
+import RecordDetailScreen from './src/screens/RecordDetailScreen';
 import QuickRecordSheet from './src/components/QuickRecordSheet';
+import { RestoredData } from './src/exporters';
 import {
   loadActivities,
   loadActivityItems,
@@ -59,6 +63,9 @@ type Route =
   | { name: 'settings'; from: 'timeline' | 'activities' }
   | { name: 'manageItems' }
   | { name: 'manageTags' }
+  | { name: 'summary' }
+  | { name: 'export' }
+  | { name: 'detail'; id: string }
   | { name: 'stats'; title: string; from: 'timeline' | 'activities' | 'manageItems' };
 
 export default function App() {
@@ -147,9 +154,22 @@ export default function App() {
     setJustRecorded(entry);
   }, [tags]);
 
+  // Create a new event inline from the record sheet; returns its id so the
+  // sheet can immediately select it.
+  const createItem = useCallback((title: string, tagId: ActivityTag['id']): string => {
+    const id = `item-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6)}`;
+    setItems((prev) => [{ id, title, tagId, createdAt: Date.now() }, ...prev]);
+    return id;
+  }, []);
+
   // Delete a single logged record from the timeline.
   const deleteActivity = useCallback((id: string) => {
     setActivities((prev) => prev.filter((a) => a.id !== id));
+  }, []);
+
+  // Edit a record's note / mood / weather / time.
+  const updateActivity = useCallback((updated: Activity) => {
+    setActivities((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
   }, []);
 
   // Deleting an item is destructive: drop the item AND every record it produced
@@ -167,6 +187,13 @@ export default function App() {
     );
   }, []);
 
+  const restoreData = useCallback((data: RestoredData) => {
+    setActivities(data.activities);
+    setItems(data.items);
+    if (data.tags.length) setTags(data.tags);
+    setRoute({ name: 'timeline' });
+  }, []);
+
   const handleClearAllData = useCallback(async () => {
     await clearAllData();
     setActivities([]);
@@ -178,6 +205,16 @@ export default function App() {
     setJustRecorded(null);
     setRoute({ name: 'timeline' });
   }, []);
+
+  const detailActivity =
+    route.name === 'detail' ? activities.find((a) => a.id === route.id) ?? null : null;
+
+  // If the record being viewed disappears (deleted / restored), leave the detail screen.
+  useEffect(() => {
+    if (route.name === 'detail' && !activities.find((a) => a.id === route.id)) {
+      setRoute({ name: 'timeline' });
+    }
+  }, [route, activities]);
 
   if (loading) {
     return (
@@ -205,7 +242,7 @@ export default function App() {
         <TimelineScreen
           activities={activities}
           tags={tags}
-          onOpenStats={(title) => setRoute({ name: 'stats', title, from: 'timeline' })}
+          onOpenDetail={(id) => setRoute({ name: 'detail', id })}
           onOpenAllActivities={() => setRoute({ name: 'activities' })}
           onOpenSettings={() => {
             setSettingsFrom('timeline');
@@ -213,6 +250,7 @@ export default function App() {
           }}
           onOpenRecord={() => setSheetOpen(true)}
           onDeleteActivity={deleteActivity}
+          onOpenSummary={() => setRoute({ name: 'summary' })}
         />
       ) : route.name === 'activities' ? (
         <AllActivitiesScreen
@@ -240,6 +278,10 @@ export default function App() {
             setSettingsFrom(route.from);
             setRoute({ name: 'manageTags' });
           }}
+          onOpenExport={() => {
+            setSettingsFrom(route.from);
+            setRoute({ name: 'export' });
+          }}
           onClearAllData={handleClearAllData}
           onBack={() =>
             setRoute(route.from === 'timeline' ? { name: 'timeline' } : { name: 'activities' })
@@ -262,6 +304,36 @@ export default function App() {
           onChangeTags={setTags}
           onBack={() => setRoute({ name: 'settings', from: settingsFrom })}
         />
+      ) : route.name === 'summary' ? (
+        <SummaryScreen
+          activities={activities}
+          tags={tags}
+          onBack={() => setRoute({ name: 'timeline' })}
+        />
+      ) : route.name === 'export' ? (
+        <ExportScreen
+          activities={activities}
+          items={items}
+          tags={tags}
+          themeId={themeId}
+          overviewStyle={overviewStyle}
+          onRestore={restoreData}
+          onBack={() => setRoute({ name: 'settings', from: settingsFrom })}
+        />
+      ) : route.name === 'detail' ? (
+        detailActivity ? (
+          <RecordDetailScreen
+            activity={detailActivity}
+            tags={tags}
+            onUpdate={updateActivity}
+            onDelete={(id) => {
+              deleteActivity(id);
+              setRoute({ name: 'timeline' });
+            }}
+            onOpenStats={(title) => setRoute({ name: 'stats', title, from: 'timeline' })}
+            onBack={() => setRoute({ name: 'timeline' })}
+          />
+        ) : null
       ) : (
         <StatsScreen
           title={route.title}
@@ -284,6 +356,7 @@ export default function App() {
         tags={tags}
         onClose={() => setSheetOpen(false)}
         onSubmit={addActivity}
+        onAddItem={createItem}
       />
       </ThemeProvider>
     </SafeAreaProvider>

@@ -124,6 +124,60 @@ export function WeatherIcon({ id, color, size = 15 }: { id: WeatherId; color?: s
   );
 }
 
+/** Star glyph used by the summary entry and card badge. */
+export function StarIcon({ color = '#FFFFFF', size = 20 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Path
+        d="M12 3l2.2 5.6 6 .4-4.6 3.9 1.5 5.8L12 15.9 6.4 18.7l1.5-5.8L3.3 9l6-.4z"
+        fill={color}
+      />
+    </Svg>
+  );
+}
+
+/** Upload / share glyph. */
+export function ShareIcon({ color = '#FFFFFF', size = 16 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 14V4M12 4L8.5 7.5M12 4l3.5 3.5"
+        stroke={color}
+        strokeWidth={1.9}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"
+        stroke={color}
+        strokeWidth={1.9}
+        strokeLinecap="round"
+      />
+    </Svg>
+  );
+}
+
+/** Download / import glyph. */
+export function DownloadIcon({ color = '#FFFFFF', size = 16 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 4v10M12 14L8.5 10.5M12 14l3.5-3.5"
+        stroke={color}
+        strokeWidth={1.9}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"
+        stroke={color}
+        strokeWidth={1.9}
+        strokeLinecap="round"
+      />
+    </Svg>
+  );
+}
+
 /** Big success checkmark for the completion screen. */
 export function CheckIcon({ color = '#FFFFFF', size = 32 }: { color?: string; size?: number }) {
   return (

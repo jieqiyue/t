@@ -28,6 +28,8 @@ export default function ManageItemsScreen({
   const [tagId, setTagId] = useState(() => tags[0]?.id || 'life');
   const [pendingArchive, setPendingArchive] = useState<ActivityItem | null>(null);
   const [pendingDelete, setPendingDelete] = useState<ActivityItem | null>(null);
+  const selectedTag = tags.find((tag) => tag.id === tagId) || null;
+  const canAddItem = !!title.trim() && !!selectedTag;
   const visibleItems = useMemo(
     () => [
       ...items.filter((item) => !item.archived),
@@ -38,11 +40,11 @@ export default function ManageItemsScreen({
 
   const addItem = () => {
     const trimmed = title.trim();
-    if (!trimmed) return;
+    if (!trimmed || !selectedTag) return;
     const item: ActivityItem = {
       id: `item-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6)}`,
       title: trimmed,
-      tagId,
+      tagId: selectedTag.id,
       createdAt: Date.now(),
     };
     onChangeItems([item, ...items]);
@@ -114,10 +116,13 @@ export default function ManageItemsScreen({
               );
             })}
           </ScrollView>
+          {tags.length === 0 && (
+            <Text style={styles.formHint}>请先去「标签管理」添加至少一个标签，再创建事件。</Text>
+          )}
           <Pressable
             onPress={addItem}
-            disabled={!title.trim()}
-            style={[styles.primaryButton, !title.trim() && styles.disabled]}
+            disabled={!canAddItem}
+            style={[styles.primaryButton, !canAddItem && styles.disabled]}
           >
             <Text style={styles.primaryText}>添加事件</Text>
           </Pressable>
@@ -125,16 +130,22 @@ export default function ManageItemsScreen({
 
         <View style={styles.list}>
           {visibleItems.map((item) => {
-            const tag = tags.find((candidate) => candidate.id === item.tagId) || tags[0];
+            const tag = tags.find((candidate) => candidate.id === item.tagId) || null;
             return (
               <View key={item.id} style={styles.itemRow}>
-                <View style={[styles.dot, { backgroundColor: tag?.dot || c.accent }]} />
-                <View style={styles.itemText}>
-                  <Text style={[styles.itemTitle, item.archived && styles.archived]}>{item.title}</Text>
-                  <Text style={[styles.itemTag, { color: tag?.text || c.accentInk }]}>
-                    {tag?.label || '标签'}{item.archived ? ' · 已归档' : ''}
-                  </Text>
-                </View>
+                <Pressable
+                  onPress={() => onOpenStats(item.title)}
+                  style={({ pressed }) => [styles.itemMain, pressed && styles.itemPressed]}
+                >
+                  <View style={[styles.dot, { backgroundColor: tag?.dot || c.muted3 }]} />
+                  <View style={styles.itemText}>
+                    <Text style={[styles.itemTitle, item.archived && styles.archived]}>{item.title}</Text>
+                    <Text style={[styles.itemTag, { color: tag?.text || c.muted3 }]}>
+                      {tag?.label || '未设置标签'}{item.archived ? ' · 已归档' : ''}
+                    </Text>
+                  </View>
+                  <Text style={styles.statHint}>统计 ›</Text>
+                </Pressable>
                 <Pressable
                   onPress={() => toggleArchive(item)}
                   style={styles.smallButton}
@@ -244,6 +255,7 @@ const createStyles = (c: Palette) => StyleSheet.create({
   },
   tagText: { fontSize: 12, fontWeight: '700', color: c.muted },
   tagTextActive: { color: '#FFFFFF', fontWeight: '800' },
+  formHint: { fontSize: 12, fontWeight: '600', color: c.muted3, lineHeight: 18 },
   dot: { width: 8, height: 8, borderRadius: 999 },
   primaryButton: { backgroundColor: c.accent, borderRadius: 15, paddingVertical: 13, alignItems: 'center' },
   disabled: { opacity: 0.45 },
@@ -257,6 +269,9 @@ const createStyles = (c: Palette) => StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: c.inputBg,
   },
+  itemMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 9 },
+  itemPressed: { opacity: 0.55 },
+  statHint: { fontSize: 10, fontWeight: '800', color: c.accent, marginLeft: 2 },
   itemText: { flex: 1, minWidth: 0, gap: 3 },
   itemTitle: { fontSize: 14, fontWeight: '800', color: c.ink },
   archived: { color: c.muted3, textDecorationLine: 'line-through' },

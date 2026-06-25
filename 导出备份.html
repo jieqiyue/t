@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+</style>
+</helmet>
+
+<div style="width:max-content;min-width:100%;min-height:100vh;box-sizing:border-box;padding:48px;background:#E7E3DA;font-family:'Nunito','Noto Sans SC',-apple-system,sans-serif">
+
+  <div style="max-width:680px;margin:0 auto 30px">
+    <div style="font-size:12px;font-weight:800;letter-spacing:.22em;color:#B3A998;margin-bottom:8px">DAILY ACTIVITY LOG · 导出与备份</div>
+    <h1 style="margin:0 0 8px;font-size:30px;font-weight:800;color:#4A4540;letter-spacing:-.01em">导出与备份</h1>
+    <p style="margin:0;font-size:14px;color:#8C8275;font-weight:500">设置 → 数据。支持把全部记录导出为 CSV / JSON，并管理本地备份。右屏为选择格式后的导出弹层。</p>
+  </div>
+
+  <div style="display:flex;gap:36px;align-items:flex-start;margin:0 auto;max-width:680px">
+
+    <!-- 1 · 导出与备份页 -->
+    <div style="display:flex;flex-direction:column;gap:13px;flex:none">
+      <span style="font-size:12px;font-weight:700;color:#9A9081;letter-spacing:.03em;padding-left:8px">导出与备份</span>
+      <div style="width:300px;height:624px;background:#F6F3EC;border-radius:42px;box-shadow:0 22px 50px rgba(74,69,64,.16),0 6px 16px rgba(74,69,64,.06);overflow:hidden;position:relative;display:flex;flex-direction:column;flex:none;border:6px solid #fff;outline:1px solid rgba(120,110,100,.1)">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 22px 4px;flex:none">
+          <span style="font-size:13px;font-weight:800;color:#4A4540">9:41</span>
+          <div style="display:flex;align-items:center;gap:6px">
+            <div style="display:flex;align-items:flex-end;gap:1.5px;height:9px"><div style="width:2.5px;height:4px;background:#4A4540;border-radius:1px"></div><div style="width:2.5px;height:6px;background:#4A4540;border-radius:1px"></div><div style="width:2.5px;height:8px;background:#4A4540;border-radius:1px"></div><div style="width:2.5px;height:9px;background:#4A4540;border-radius:1px"></div></div>
+            <div style="width:18px;height:9px;border:1px solid rgba(74,69,64,.5);border-radius:2px;padding:1px"><div style="width:70%;height:100%;background:#4A4540;border-radius:1px"></div></div>
+          </div>
+        </div>
+        <div style="flex:1;overflow:hidden;padding:6px 20px 0;display:flex;flex-direction:column;gap:18px">
+          <div style="display:flex;align-items:center;gap:10px;padding-top:2px">
+            <div style="width:30px;height:30px;border-radius:50%;background:#fff;box-shadow:0 2px 8px rgba(74,69,64,.06);display:flex;align-items:center;justify-content:center;flex:none"><span style="font-size:17px;color:#8C8275;margin-top:-2px">‹</span></div>
+            <span style="font-size:20px;font-weight:800;color:#4A4540;line-height:1.1">导出与备份</span>
+          </div>
+
+          <!-- 数据概览 -->
+          <div style="background:linear-gradient(160deg,#FBF9F4,#F4EFE6);border-radius:18px;padding:15px 16px;box-shadow:0 4px 14px rgba(74,69,64,.06);display:flex;align-items:center;gap:14px">
+            <div style="display:flex;flex-direction:column;gap:1px;flex:1"><span style="font-size:24px;font-weight:800;color:#4A4540;line-height:1.1">255 <span style="font-size:12px;font-weight:700;color:#A89D8E">条记录</span></span><span style="font-size:11px;font-weight:600;color:#A89D8E">9 个事件 · 4 个标签</span></div>
+            <div style="width:1px;height:34px;background:#E2DACC"></div>
+            <div style="display:flex;flex-direction:column;gap:1px"><span style="font-size:11px;font-weight:700;color:#A89D8E">最早</span><span style="font-size:13px;font-weight:800;color:#4A4540">2025.09</span></div>
+          </div>
+
+          <!-- 导出 -->
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <span style="font-size:11px;font-weight:800;letter-spacing:.12em;color:#B3A998;padding-left:2px">导出数据</span>
+            <div style="background:#fff;border-radius:18px;box-shadow:0 3px 12px rgba(74,69,64,.05);overflow:hidden">
+              <div style="display:flex;align-items:center;gap:12px;padding:14px 15px;border-bottom:1px solid #F2EEE5">
+                <div style="width:36px;height:36px;border-radius:11px;background:#E9EEE6;display:flex;align-items:center;justify-content:center;flex:none"><span style="font-size:10px;font-weight:900;color:#5E7257;letter-spacing:-.02em">CSV</span></div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:1px"><span style="font-size:14px;font-weight:700;color:#4A4540">导出为 CSV</span><span style="font-size:11px;font-weight:600;color:#A89D8E">表格软件可打开（Excel / Numbers）</span></div>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 14V4M12 4L8.5 7.5M12 4l3.5 3.5" stroke="#C9C1B3" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5" stroke="#C9C1B3" stroke-width="1.8" stroke-linecap="round"/></svg>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;padding:14px 15px">
+                <div style="width:36px;height:36px;border-radius:11px;background:#E7ECEF;display:flex;align-items:center;justify-content:center;flex:none"><span style="font-size:9px;font-weight:900;color:#5E7080;letter-spacing:-.02em">JSON</span></div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:1px"><span style="font-size:14px;font-weight:700;color:#4A4540">导出为 JSON</span><span style="font-size:11px;font-weight:600;color:#A89D8E">含心情、天气、备注的完整结构</span></div>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 14V4M12 4L8.5 7.5M12 4l3.5 3.5" stroke="#C9C1B3" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5" stroke="#C9C1B3" stroke-width="1.8" stroke-linecap="round"/></svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- 备份 -->
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <span style="font-size:11px;font-weight:800;letter-spacing:.12em;color:#B3A998;padding-left:2px">本地备份</span>
+            <div style="background:#fff;border-radius:18px;box-shadow:0 3px 12px rgba(74,69,64,.05);overflow:hidden">
+              <div style="display:flex;align-items:center;gap:12px;padding:14px 15px;border-bottom:1px solid #F2EEE5">
+                <div style="width:36px;height:36px;border-radius:11px;background:#F4EFE0;display:flex;align-items:center;justify-content:center;flex:none"><svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M4 7a8 4 0 0 0 16 0M4 7a8 4 0 0 1 16 0v10a8 4 0 0 1-16 0V7M4 12a8 4 0 0 0 16 0" stroke="#897B5E" stroke-width="1.6"/></svg></div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:1px"><span style="font-size:14px;font-weight:700;color:#4A4540">立即备份</span><span style="font-size:11px;font-weight:600;color:#A89D8E">上次：今天 09:12</span></div>
+                <span style="font-size:11.5px;font-weight:800;color:#A8B5A2;background:#E9EEE6;padding:5px 11px;border-radius:999px">备份</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;padding:14px 15px;border-bottom:1px solid #F2EEE5">
+                <div style="flex:1;display:flex;flex-direction:column;gap:1px"><span style="font-size:14px;font-weight:700;color:#4A4540">自动备份</span><span style="font-size:11px;font-weight:600;color:#A89D8E">每天 · 仅 Wi-Fi</span></div>
+                <div style="width:42px;height:25px;border-radius:999px;background:#A8B5A2;padding:3px;display:flex;justify-content:flex-end;box-shadow:inset 0 1px 3px rgba(0,0,0,.08)"><div style="width:19px;height:19px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.2)"></div></div>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;padding:14px 15px">
+                <div style="flex:1;display:flex;flex-direction:column;gap:1px"><span style="font-size:14px;font-weight:700;color:#4A4540">从备份恢复</span><span style="font-size:11px;font-weight:600;color:#A89D8E">导入 .json 备份文件</span></div>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 4v10M12 14L8.5 10.5M12 14l3.5-3.5" stroke="#C9C1B3" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5" stroke="#C9C1B3" stroke-width="1.8" stroke-linecap="round"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="position:absolute;bottom:9px;left:50%;transform:translateX(-50%);width:108px;height:4px;border-radius:999px;background:rgba(74,69,64,.16)"></div>
+      </div>
+    </div>
+
+    <!-- 2 · 导出弹层 -->
+    <div style="display:flex;flex-direction:column;gap:13px;flex:none">
+      <span style="font-size:12px;font-weight:700;color:#9A9081;letter-spacing:.03em;padding-left:8px">导出范围 · CSV</span>
+      <div style="width:300px;height:624px;background:#F6F3EC;border-radius:42px;box-shadow:0 22px 50px rgba(74,69,64,.16),0 6px 16px rgba(74,69,64,.06);overflow:hidden;position:relative;display:flex;flex-direction:column;flex:none;border:6px solid #fff;outline:1px solid rgba(120,110,100,.1)">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 22px 4px;flex:none">
+          <span style="font-size:13px;font-weight:800;color:#4A4540">9:41</span>
+          <div style="display:flex;align-items:center;gap:6px">
+            <div style="display:flex;align-items:flex-end;gap:1.5px;height:9px"><div style="width:2.5px;height:4px;background:#4A4540;border-radius:1px"></div><div style="width:2.5px;height:6px;background:#4A4540;border-radius:1px"></div><div style="width:2.5px;height:8px;background:#4A4540;border-radius:1px"></div><div style="width:2.5px;height:9px;background:#4A4540;border-radius:1px"></div></div>
+            <div style="width:18px;height:9px;border:1px solid rgba(74,69,64,.5);border-radius:2px;padding:1px"><div style="width:70%;height:100%;background:#4A4540;border-radius:1px"></div></div>
+          </div>
+        </div>
+        <div style="flex:1;position:relative;overflow:hidden">
+          <!-- 背景虚化 -->
+          <div style="position:absolute;inset:0;padding:6px 20px;opacity:.4;filter:blur(2px);display:flex;flex-direction:column;gap:16px">
+            <div style="height:30px"></div>
+            <div style="background:#F0EAE0;border-radius:18px;height:56px"></div>
+            <div style="background:#F0EAE0;border-radius:18px;height:110px"></div>
+          </div>
+          <div style="position:absolute;inset:0;background:rgba(60,55,50,.34)"></div>
+          <!-- 弹层 -->
+          <div style="position:absolute;left:0;right:0;bottom:0;background:#FBF9F4;border-radius:28px 28px 0 0;padding:14px 20px 20px;box-shadow:0 -12px 44px rgba(50,46,42,.22);display:flex;flex-direction:column;gap:15px">
+            <div style="width:38px;height:4px;border-radius:999px;background:#DAD3C7;align-self:center"></div>
+            <div style="display:flex;align-items:center;gap:9px">
+              <div style="width:32px;height:32px;border-radius:10px;background:#E9EEE6;display:flex;align-items:center;justify-content:center"><span style="font-size:9px;font-weight:900;color:#5E7257;letter-spacing:-.02em">CSV</span></div>
+              <div style="display:flex;flex-direction:column;gap:1px"><span style="font-size:16px;font-weight:800;color:#4A4540">导出为 CSV</span><span style="font-size:11px;font-weight:600;color:#A89D8E">选择导出范围</span></div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:7px">
+              <span style="font-size:10.5px;font-weight:800;letter-spacing:.1em;color:#B3A998">时间范围</span>
+              <div style="display:flex;gap:7px;flex-wrap:wrap">
+                <span style="font-size:12px;font-weight:700;padding:7px 13px;border-radius:999px;background:#fff;color:#8C8275;border:1.5px solid #ECE6DC">本月</span>
+                <span style="font-size:12px;font-weight:700;padding:7px 13px;border-radius:999px;background:#fff;color:#8C8275;border:1.5px solid #ECE6DC">近 3 个月</span>
+                <span style="font-size:12px;font-weight:800;padding:7px 14px;border-radius:999px;background:#A8B5A2;color:#fff;box-shadow:0 4px 12px rgba(168,181,162,.4)">全部</span>
+              </div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:7px">
+              <span style="font-size:10.5px;font-weight:800;letter-spacing:.1em;color:#B3A998">包含字段</span>
+              <div style="background:#fff;border-radius:14px;box-shadow:0 2px 8px rgba(74,69,64,.04);overflow:hidden">
+                <div style="display:flex;align-items:center;gap:10px;padding:11px 13px;border-bottom:1px solid #F2EEE5"><span style="font-size:13px;font-weight:700;color:#4A4540;flex:1">事件 · 标签 · 时间</span><div style="width:19px;height:19px;border-radius:6px;background:#A8B5A2;display:flex;align-items:center;justify-content:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+                <div style="display:flex;align-items:center;gap:10px;padding:11px 13px;border-bottom:1px solid #F2EEE5"><span style="font-size:13px;font-weight:700;color:#4A4540;flex:1">心情 · 天气</span><div style="width:19px;height:19px;border-radius:6px;background:#A8B5A2;display:flex;align-items:center;justify-content:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+                <div style="display:flex;align-items:center;gap:10px;padding:11px 13px"><span style="font-size:13px;font-weight:700;color:#4A4540;flex:1">备注（一句话）</span><div style="width:19px;height:19px;border-radius:6px;border:1.5px solid #DDD5C8"></div></div>
+              </div>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:8px;background:#F2EEE5;border-radius:12px;padding:10px 13px">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="5" y="4" width="14" height="16" rx="2.5" stroke="#A89D8E" stroke-width="1.6"/><path d="M8.5 9h7M8.5 12.5h7M8.5 16h4" stroke="#A89D8E" stroke-width="1.6" stroke-linecap="round"/></svg>
+              <span style="font-size:11.5px;font-weight:700;color:#8C8275;flex:1">activity-log-2026.csv</span>
+              <span style="font-size:10.5px;font-weight:600;color:#B3A998">约 28 KB</span>
+            </div>
+
+            <div style="background:#4A4540;border-radius:15px;padding:14px;text-align:center;box-shadow:0 10px 24px rgba(74,69,64,.32);display:flex;align-items:center;justify-content:center;gap:7px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 14V4M12 4L8.5 7.5M12 4l3.5 3.5" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5" stroke="#fff" stroke-width="1.9" stroke-linecap="round"/></svg><span style="font-size:14.5px;font-weight:800;color:#fff;letter-spacing:.04em">导出 255 条记录</span></div>
+          </div>
+        </div>
+        <div style="position:absolute;bottom:9px;left:50%;transform:translateX(-50%);width:108px;height:4px;border-radius:999px;background:rgba(74,69,64,.16);z-index:6"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
