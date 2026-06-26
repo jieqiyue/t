@@ -37,6 +37,8 @@ import {
 } from './src/types';
 import { THEMES, ThemeId, ThemeProvider } from './src/theme';
 import { isSameDay } from './src/dateUtils';
+import { newId } from './src/ids';
+import { activityTagKey } from './src/tagUtils';
 
 /**
  * Persists `value` via `save` whenever it changes — but skips the first run
@@ -139,9 +141,9 @@ export default function App() {
       ? tag.id
       : 'life') as CategoryId;
     const entry: Activity = {
-      id: `${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6)}`,
+      id: newId(),
       itemId: input.itemId,
-      tagId: input.tagId,
+      tagId: tag?.id,
       title: input.title,
       category,
       note: input.note,
@@ -156,8 +158,8 @@ export default function App() {
 
   // Create a new event inline from the record sheet; returns its id so the
   // sheet can immediately select it.
-  const createItem = useCallback((title: string, tagId: ActivityTag['id']): string => {
-    const id = `item-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6)}`;
+  const createItem = useCallback((title: string, tagId?: ActivityTag['id']): string => {
+    const id = newId('item-');
     setItems((prev) => [{ id, title, tagId, createdAt: Date.now() }, ...prev]);
     return id;
   }, []);
@@ -181,7 +183,7 @@ export default function App() {
         (a) =>
           !(
             a.itemId === item.id ||
-            (a.title === item.title && (a.tagId || a.category) === item.tagId)
+            (!a.itemId && a.title === item.title && activityTagKey(a) === item.tagId)
           ),
       ),
     );

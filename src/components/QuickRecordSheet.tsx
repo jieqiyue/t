@@ -25,11 +25,7 @@ interface Props {
   tags: ActivityTag[];
   onClose: () => void;
   onSubmit: (input: NewRecordInput) => void;
-  onAddItem: (title: string, tagId: ActivityTag['id']) => string;
-}
-
-function defaultTagId(tags: ActivityTag[]): ActivityTag['id'] {
-  return tags.find((t) => t.id === 'life')?.id ?? tags[0]?.id ?? 'life';
+  onAddItem: (title: string, tagId?: ActivityTag['id']) => string;
 }
 
 export default function QuickRecordSheet({ visible, items, tags, onClose, onSubmit, onAddItem }: Props) {
@@ -43,7 +39,7 @@ export default function QuickRecordSheet({ visible, items, tags, onClose, onSubm
   const [weather, setWeather] = useState<WeatherId | null>(null);
   const [adding, setAdding] = useState(false);
   const [newTitle, setNewTitle] = useState('');
-  const [newTagId, setNewTagId] = useState<ActivityTag['id']>(() => defaultTagId(tags));
+  const [newTagId, setNewTagId] = useState<ActivityTag['id'] | null>(null);
   const slide = useState(() => new Animated.Value(0))[0];
   const activeItems = items.filter((item) => !item.archived);
 
@@ -56,7 +52,7 @@ export default function QuickRecordSheet({ visible, items, tags, onClose, onSubm
       setWeather(null);
       setAdding(false);
       setNewTitle('');
-      setNewTagId(defaultTagId(tags));
+      setNewTagId(null);
       slide.setValue(0);
       Animated.timing(slide, {
         toValue: 1,
@@ -88,7 +84,7 @@ export default function QuickRecordSheet({ visible, items, tags, onClose, onSubm
   const confirmAdd = () => {
     const t = newTitle.trim();
     if (!t) return;
-    const id = onAddItem(t, newTagId);
+    const id = onAddItem(t, newTagId ?? undefined);
     setSelectedItemId(id);
     setAdding(false);
     setNewTitle('');
@@ -141,7 +137,7 @@ export default function QuickRecordSheet({ visible, items, tags, onClose, onSubm
                             active && { backgroundColor: c.accent, borderColor: c.accent },
                           ]}
                         >
-                          {!active && <View style={[styles.eventDot, { backgroundColor: tag?.dot || c.accent }]} />}
+                          {!active && <View style={[styles.eventDot, { backgroundColor: tag?.dot || c.muted3 }]} />}
                           <Text style={[styles.eventText, active && styles.eventTextActive]}>
                             {item.title}
                           </Text>
@@ -172,6 +168,18 @@ export default function QuickRecordSheet({ visible, items, tags, onClose, onSubm
                         maxLength={40}
                       />
                       <View style={styles.wrapRow}>
+                        <Pressable
+                          onPress={() => setNewTagId(null)}
+                          style={[
+                            styles.eventChip,
+                            newTagId == null && { backgroundColor: c.accent, borderColor: c.accent },
+                          ]}
+                        >
+                          {newTagId != null && <View style={[styles.eventDot, { backgroundColor: c.muted3 }]} />}
+                          <Text style={[styles.eventText, newTagId == null && styles.eventTextActive]}>
+                            无标签
+                          </Text>
+                        </Pressable>
                         {tags.map((tag) => {
                           const active = newTagId === tag.id;
                           return (
@@ -313,7 +321,7 @@ const createStyles = (c: Palette) => StyleSheet.create({
     shadowRadius: 30,
     elevation: 24,
   },
-  grabber: { width: 38, height: 4, borderRadius: 999, backgroundColor: '#DAD3C7', alignSelf: 'center' },
+  grabber: { width: 38, height: 4, borderRadius: 999, backgroundColor: c.divider, alignSelf: 'center' },
   headerBlock: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   title: { fontSize: 17, fontWeight: '800', color: c.ink },
   subtitle: { fontSize: 11.5, fontWeight: '600', color: c.muted3 },

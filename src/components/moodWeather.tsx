@@ -2,37 +2,9 @@ import React from 'react';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { MoodId, WeatherId } from '../types';
 
-export const MOODS: { id: MoodId; label: string }[] = [
-  { id: 'great', label: '很好' },
-  { id: 'good', label: '不错' },
-  { id: 'ok', label: '一般' },
-  { id: 'down', label: '低落' },
-  { id: 'bad', label: '糟糕' },
-];
-
-export const WEATHERS: { id: WeatherId; label: string; color: string }[] = [
-  { id: 'sunny', label: '晴', color: '#C2B49C' },
-  { id: 'cloudy', label: '多云', color: '#C3BBAC' },
-  { id: 'rain', label: '雨', color: '#9FB0BE' },
-  { id: 'snow', label: '雪', color: '#AFC0CC' },
-];
-
-export const MOOD_MAP: Record<MoodId, { id: MoodId; label: string }> = MOODS.reduce(
-  (acc, m) => {
-    acc[m.id] = m;
-    return acc;
-  },
-  {} as Record<MoodId, { id: MoodId; label: string }>,
-);
-
-export const WEATHER_MAP: Record<WeatherId, { id: WeatherId; label: string; color: string }> =
-  WEATHERS.reduce(
-    (acc, w) => {
-      acc[w.id] = w;
-      return acc;
-    },
-    {} as Record<WeatherId, { id: WeatherId; label: string; color: string }>,
-  );
+// Mood / weather metadata lives in one pure module; import (for local use) and re-export.
+import { MOODS, WEATHERS, MOOD_MAP, WEATHER_MAP, MOOD_DIST_COLOR } from '../moods';
+export { MOODS, WEATHERS, MOOD_MAP, WEATHER_MAP, MOOD_DIST_COLOR };
 
 /** A small Morandi line-art face for a mood. `color` drives eyes + mouth. */
 export function MoodFace({ id, color, size = 20 }: { id: MoodId; color: string; size?: number }) {

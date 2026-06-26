@@ -10,23 +10,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 import { Palette, useTheme } from '../theme';
-import { Activity, ActivityTag, MoodId } from '../types';
+import { Activity, ActivityTag } from '../types';
 import { buildSummary, SummaryPeriod } from '../summary';
-import { MOOD_MAP, ShareIcon, StarIcon } from '../components/moodWeather';
+import { MOOD_DIST_COLOR, MOOD_MAP, ShareIcon, StarIcon } from '../components/moodWeather';
+import { resolveOptionalTag } from '../tagUtils';
 
 interface Props {
   activities: Activity[];
   tags: ActivityTag[];
   onBack: () => void;
 }
-
-const MOOD_DIST: Record<MoodId, { label: string; color: string }> = {
-  great: { label: '很好', color: '#8FA886' },
-  good: { label: '不错', color: '#A8B5A2' },
-  ok: { label: '一般', color: '#C7CDB8' },
-  down: { label: '低落', color: '#CBBBA0' },
-  bad: { label: '糟糕', color: '#C9A9A0' },
-};
 
 export default function SummaryScreen({ activities, tags, onBack }: Props) {
   const insets = useSafeAreaInsets();
@@ -117,10 +110,7 @@ export default function SummaryScreen({ activities, tags, onBack }: Props) {
               <Text style={styles.emptyText}>这段时间还没有记录。</Text>
             ) : (
               summary.top.map((t) => {
-                const tag = tags.find((x) => x.id === t.tagId);
-                const dot = tag?.dot || c.accent;
-                const text = tag?.text || c.accentInk;
-                const soft = tag?.soft || c.inputBg;
+                const { dot, text, soft } = resolveOptionalTag(c, tags, t.tagId);
                 return (
                   <View key={t.title} style={styles.topRow}>
                     <View style={[styles.topIcon, { backgroundColor: soft }]}>
@@ -168,7 +158,7 @@ export default function SummaryScreen({ activities, tags, onBack }: Props) {
                       key={m.id}
                       style={{
                         flex: m.count,
-                        backgroundColor: MOOD_DIST[m.id].color,
+                        backgroundColor: MOOD_DIST_COLOR[m.id],
                       }}
                     />
                   ))}
@@ -176,8 +166,8 @@ export default function SummaryScreen({ activities, tags, onBack }: Props) {
                 <View style={styles.moodLegend}>
                   {summary.moods.map((m) => (
                     <View key={m.id} style={styles.legendItem}>
-                      <View style={[styles.legendDot, { backgroundColor: MOOD_DIST[m.id].color }]} />
-                      <Text style={styles.legendText}>{MOOD_DIST[m.id].label}</Text>
+                      <View style={[styles.legendDot, { backgroundColor: MOOD_DIST_COLOR[m.id] }]} />
+                      <Text style={styles.legendText}>{MOOD_MAP[m.id].label}</Text>
                     </View>
                   ))}
                 </View>
@@ -226,7 +216,7 @@ const createStyles = (c: Palette) => StyleSheet.create({
   title: { flex: 1, fontSize: 22, fontWeight: '800', color: c.ink },
   segmented: {
     flexDirection: 'row',
-    backgroundColor: '#EEE8DE',
+    backgroundColor: c.border,
     borderRadius: 12,
     padding: 3,
     gap: 2,

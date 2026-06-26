@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CATEGORY_MAP, Palette, useTheme } from '../theme';
+import { Palette, useTheme } from '../theme';
 import { Activity, ActivityTag } from '../types';
+import { resolveActivityTag } from '../tagUtils';
 import { timeLabel } from '../dateUtils';
 import { CheckIcon, MOOD_MAP, MoodFace, WEATHER_MAP, WeatherIcon } from '../components/moodWeather';
 
@@ -29,7 +30,7 @@ export default function RecordDoneScreen({ activity, tags, todayCount, onBack }:
     }).start();
   }, [anim]);
 
-  const tag = tags.find((t) => t.id === (activity.tagId || activity.category)) || CATEGORY_MAP[activity.category];
+  const tag = resolveActivityTag(c, tags, activity);
   const mood = activity.mood ? MOOD_MAP[activity.mood] : null;
   const weather = activity.weather ? WEATHER_MAP[activity.weather] : null;
 
@@ -55,7 +56,7 @@ export default function RecordDoneScreen({ activity, tags, todayCount, onBack }:
           <Text style={styles.cardTitle}>{activity.title}</Text>
           {!!activity.note && <Text style={styles.cardNote}>{activity.note}</Text>}
           <View style={styles.tagsRow}>
-            <View style={[styles.catPill, { backgroundColor: tag.soft || c.accentSoft }]}>
+            <View style={[styles.catPill, { backgroundColor: tag.soft }]}>
               <View style={[styles.catDot, { backgroundColor: tag.dot }]} />
               <Text style={[styles.catText, { color: tag.text }]}>{tag.label}</Text>
             </View>

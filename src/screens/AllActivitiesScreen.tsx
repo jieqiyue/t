@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { DimensionValue, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CATEGORY_MAP, Palette, useTheme } from '../theme';
+import { Palette, UNTAGGED_LABEL, useTheme } from '../theme';
 import { Activity, ActivityOverviewStyle, ActivityTag } from '../types';
+import { activityTagKey, resolveOptionalTag, untaggedView } from '../tagUtils';
 
 interface Props {
   activities: Activity[];
@@ -15,12 +16,12 @@ interface Props {
 
 interface ActivitySummary {
   title: string;
-  tagId: ActivityTag['id'];
+  tagId?: ActivityTag['id'];
   count: number;
   latest: number;
 }
 
-type TagFilter = 'all' | ActivityTag['id'];
+type TagFilter = 'all' | 'untagged' | ActivityTag['id'];
 type CloudMode = 'frequency' | 'category';
 
 export default function AllActivitiesScreen({
@@ -37,19 +38,33 @@ export default function AllActivitiesScreen({
   const [cloudMode, setCloudMode] = useState<CloudMode>('frequency');
 
   const summaries = useMemo(() => buildSummaries(activities), [activities]);
+  // A record counts as "untagged" for display if it has no tag OR its tag id no
+  // longer exists (orphaned after a tag was deleted / restored). This keeps such
+  // records visible everywhere instead of silently dropping out of category views.
+  const tagIds = useMemo(() => new Set(tags.map((t) => t.id)), [tags]);
   const filtered = useMemo(
-    () => summaries.filter((item) => filter === 'all' || item.tagId === filter),
-    [filter, summaries],
+    () =>
+      summaries.filter((item) => {
+        if (filter === 'all') return true;
+        if (filter === 'untagged') return !item.tagId || !tagIds.has(item.tagId);
+        return item.tagId === filter;
+      }),
+    [filter, summaries, tagIds],
   );
   const total = useMemo(() => summaries.reduce((sum, item) => sum + item.count, 0), [summaries]);
+  const hasUntagged = useMemo(
+    () => summaries.some((item) => !item.tagId || !tagIds.has(item.tagId)),
+    [summaries, tagIds],
+  );
   const categoryTotals = useMemo(() => {
     const totals: Record<string, number> = {};
     summaries.forEach((item) => {
-      totals[item.tagId] = (totals[item.tagId] || 0) + item.count;
+      const key = item.tagId && tagIds.has(item.tagId) ? item.tagId : 'untagged';
+      totals[key] = (totals[key] || 0) + item.count;
     });
     return totals;
-  }, [summaries]);
-  const maxCount = Math.max(1, ...filtered.map((item) => item.count));
+  }, [summaries, tagIds]);
+  const maxCount = useMemo(() => Math.max(1, ...filtered.map((item) => item.count)), [filtered]);
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
@@ -78,7 +93,7 @@ export default function AllActivitiesScreen({
 
         {overviewStyle === 'rank' ? (
           <>
-            <CategoryFilters tags={tags} value={filter} onChange={setFilter} />
+            <CategoryFilters tags={tags} hasUntagged={hasUntagged} value={filter} onChange={setFilter} />
             <RankOverview items={filtered} tags={tags} maxCount={maxCount} onOpenStats={onOpenStats} />
           </>
         ) : (
@@ -127,7 +142,7 @@ function buildSummaries(activities: Activity[]): ActivitySummary[] {
     if (!existing) {
       map.set(activity.title, {
         title: activity.title,
-        tagId: activity.tagId || activity.category,
+        tagId: activityTagKey(activity),
         count: 1,
         latest: activity.timestamp,
       });
@@ -137,7 +152,7 @@ function buildSummaries(activities: Activity[]): ActivitySummary[] {
     existing.count += 1;
     if (activity.timestamp > existing.latest) {
       existing.latest = activity.timestamp;
-      existing.tagId = activity.tagId || activity.category;
+      existing.tagId = activityTagKey(activity);
     }
   }
 
@@ -146,16 +161,19 @@ function buildSummaries(activities: Activity[]): ActivitySummary[] {
 
 function CategoryFilters({
   tags,
+  hasUntagged,
   value,
   onChange,
 }: {
   tags: ActivityTag[];
+  hasUntagged: boolean;
   value: TagFilter;
   onChange: (value: TagFilter) => void;
 }) {
   const styles = useThemedStyles();
   const filters: { id: TagFilter; label: string }[] = [
     { id: 'all', label: '全部' },
+    ...(hasUntagged ? [{ id: 'untagged' as const, label: UNTAGGED_LABEL }] : []),
     ...tags.map((tag) => ({ id: tag.id, label: tag.label })),
   ];
 
@@ -194,13 +212,14 @@ function RankOverview({
   maxCount: number;
   onOpenStats: (title: string) => void;
 }) {
+  const c = useTheme();
   const styles = useThemedStyles();
   if (items.length === 0) return <EmptyState />;
 
   return (
     <View style={styles.rankCard}>
       {items.map((item, index) => {
-        const category = tags.find((tag) => tag.id === item.tagId) || CATEGORY_MAP.life;
+        const category = resolveOptionalTag(c, tags, item.tagId);
         const width = `${Math.max(9, Math.round((item.count / maxCount) * 100))}%` as DimensionValue;
         return (
           <Pressable
@@ -245,13 +264,14 @@ function CloudOverview({
   maxCount: number;
   onOpenStats: (title: string) => void;
 }) {
+  const c = useTheme();
   const styles = useThemedStyles();
   if (items.length === 0) return <EmptyState />;
 
   return (
     <View style={styles.cloud}>
       {items.map((item) => {
-        const category = tags.find((tag) => tag.id === item.tagId) || CATEGORY_MAP.life;
+        const category = resolveOptionalTag(c, tags, item.tagId);
         const level = item.count / maxCount;
         const fontSize = 14 + level * 12;
         const paddingHorizontal = 12 + level * 5;
@@ -305,22 +325,32 @@ function CloudByCategoryOverview({
   maxCount: number;
   onOpenStats: (title: string) => void;
 }) {
+  const c = useTheme();
   const styles = useThemedStyles();
   if (items.length === 0) return <EmptyState />;
 
-  const groups = tags
+  const tagIds = new Set(tags.map((t) => t.id));
+  const taggedGroups = tags
     .map((tag) => ({
+      key: tag.id,
       tag,
       items: items.filter((item) => item.tagId === tag.id),
     }))
     .filter((group) => group.items.length > 0);
+  // Untagged OR orphaned (tag deleted) — both fall into the neutral bucket so
+  // nothing disappears and the per-group totals add up to the overall total.
+  const untaggedItems = items.filter((item) => !item.tagId || !tagIds.has(item.tagId));
+  const groups = [
+    ...taggedGroups,
+    ...(untaggedItems.length > 0 ? [{ key: '__untagged', tag: untaggedView(c), items: untaggedItems }] : []),
+  ];
 
   return (
     <View style={styles.categoryCloud}>
       {groups.map((group) => {
         const total = group.items.reduce((sum, item) => sum + item.count, 0);
         return (
-          <View key={group.tag.id} style={styles.categoryGroup}>
+          <View key={group.key} style={styles.categoryGroup}>
             <View style={styles.categoryHead}>
               <View style={styles.categoryName}>
                 <View style={[styles.smallDot, { backgroundColor: group.tag.dot }]} />
@@ -342,7 +372,10 @@ function CloudByCategoryOverview({
 }
 
 function CategoryTotals({ tags, totals }: { tags: ActivityTag[]; totals: Record<string, number> }) {
+  const c = useTheme();
   const styles = useThemedStyles();
+  const untagged = untaggedView(c);
+  const showUntagged = !!totals.untagged;
   return (
     <View style={styles.totalCard}>
       <Text style={styles.totalTitle}>各分类累计</Text>
@@ -356,6 +389,13 @@ function CategoryTotals({ tags, totals }: { tags: ActivityTag[]; totals: Record<
             </View>
           );
         })}
+        {showUntagged && (
+          <View key="untagged" style={styles.totalItem}>
+            <View style={[styles.smallDot, { backgroundColor: untagged.dot }]} />
+            <Text style={styles.totalLabel}>{untagged.label}</Text>
+            <Text style={[styles.totalNum, { color: untagged.text }]}>{totals.untagged}</Text>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -448,7 +488,7 @@ const createStyles = (c: Palette) => StyleSheet.create({
   progressFill: { height: '100%', borderRadius: 4 },
   segmented: {
     flexDirection: 'row',
-    backgroundColor: '#EEE8DE',
+    backgroundColor: c.border,
     borderRadius: 12,
     padding: 3,
     gap: 2,

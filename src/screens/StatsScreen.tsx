@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CATEGORY_MAP, Palette, heatColor, heatLegend, useTheme } from '../theme';
+import { Palette, heatColor, heatLegend, useTheme } from '../theme';
 import { Activity, ActivityTag } from '../types';
+import { resolveActivityTag, untaggedView } from '../tagUtils';
 import { cnMonth, daysInMonth, mondayFirstIndex, timeLabel } from '../dateUtils';
 import { MOOD_MAP, MoodFace, WEATHER_MAP, WeatherIcon } from '../components/moodWeather';
 
@@ -36,10 +37,12 @@ export default function StatsScreen({ title, activities, tags, onBack }: Props) 
       (acc, a) => (!acc || a.timestamp > acc.timestamp ? a : acc),
       null,
     );
-    return latest
-      ? tags.find((tag) => tag.id === (latest.tagId || latest.category)) || CATEGORY_MAP[latest.category]
-      : CATEGORY_MAP.life;
-  }, [matching, tags]);
+    return latest ? resolveActivityTag(c, tags, latest) : untaggedView(c);
+  }, [matching, tags, c]);
+
+  // The detail sheet shows the tag of the specific record being viewed, which
+  // may differ from the title-level (latest) tag above.
+  const detailTag = detail ? resolveActivityTag(c, tags, detail) : null;
 
   // Per-day counts for the displayed month.
   const { counts, total, activeDays } = useMemo(() => {
@@ -117,7 +120,7 @@ export default function StatsScreen({ title, activities, tags, onBack }: Props) 
             <Text style={styles.headerTitle} numberOfLines={1}>
               {title}
             </Text>
-            <View style={[styles.headerTag, { backgroundColor: category.soft || c.accentSoft }]}>
+            <View style={[styles.headerTag, { backgroundColor: category.soft }]}>
               <Text style={[styles.headerTagText, { color: category.text }]}>{category.label}</Text>
             </View>
           </View>
@@ -266,13 +269,13 @@ export default function StatsScreen({ title, activities, tags, onBack }: Props) 
           <Pressable style={styles.detailScrim} onPress={() => setDetail(null)} />
           <View style={[styles.detailSheet, { paddingBottom: 20 + insets.bottom }]}>
             <View style={styles.grabber} />
-            {detail && (
+            {detail && detailTag && (
               <>
                 <View style={styles.detailHead}>
-                  <View style={[styles.headerDot, { backgroundColor: category.dot }]} />
+                  <View style={[styles.headerDot, { backgroundColor: detailTag.dot }]} />
                   <Text style={styles.detailTitle} numberOfLines={1}>{detail.title}</Text>
-                  <View style={[styles.headerTag, { backgroundColor: category.soft || c.accentSoft }]}>
-                    <Text style={[styles.headerTagText, { color: category.text }]}>{category.label}</Text>
+                  <View style={[styles.headerTag, { backgroundColor: detailTag.soft }]}>
+                    <Text style={[styles.headerTagText, { color: detailTag.text }]}>{detailTag.label}</Text>
                   </View>
                 </View>
                 <Text style={styles.detailTime}>
@@ -450,7 +453,7 @@ const createStyles = (c: Palette) => StyleSheet.create({
     shadowRadius: 30,
     elevation: 24,
   },
-  grabber: { width: 38, height: 4, borderRadius: 999, backgroundColor: '#DAD3C7', alignSelf: 'center' },
+  grabber: { width: 38, height: 4, borderRadius: 999, backgroundColor: c.divider, alignSelf: 'center' },
   detailHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   detailTitle: { flex: 1, fontSize: 18, fontWeight: '800', color: c.ink },
   detailTime: { fontSize: 12.5, fontWeight: '600', color: c.muted3, marginTop: -8 },

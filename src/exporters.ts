@@ -1,4 +1,7 @@
-import { Activity, ActivityItem, ActivityTag, MoodId, WeatherId } from './types';
+import { Activity, ActivityItem, ActivityTag } from './types';
+import { MOOD_MAP, WEATHER_MAP } from './moods';
+import { activityTagKey } from './tagUtils';
+import { UNTAGGED_LABEL } from './theme';
 
 export type ExportRange = 'month' | '3months' | 'all';
 
@@ -7,27 +10,29 @@ export interface CsvFields {
   note: boolean;
 }
 
-const MOOD_LABEL: Record<MoodId, string> = {
-  great: '很好',
-  good: '不错',
-  ok: '一般',
-  down: '低落',
-  bad: '糟糕',
-};
-
-const WEATHER_LABEL: Record<WeatherId, string> = {
-  sunny: '晴',
-  cloudy: '多云',
-  rain: '雨',
-  snow: '雪',
-};
-
 function pad(n: number): string {
   return n < 10 ? `0${n}` : `${n}`;
 }
 
+const VALID_MOODS = new Set(Object.keys(MOOD_MAP));
+const VALID_WEATHER = new Set(Object.keys(WEATHER_MAP));
+
+/**
+ * Drop mood / weather values that aren't in the known vocabulary. A hand-edited
+ * or older backup could otherwise carry an unknown id that crashes later reads
+ * like `MOOD_MAP[a.mood].label` (export, timeline, detail, summary).
+ */
+function sanitizeActivity(a: Activity): Activity {
+  return {
+    ...a,
+    mood: a.mood && VALID_MOODS.has(a.mood) ? a.mood : undefined,
+    weather: a.weather && VALID_WEATHER.has(a.weather) ? a.weather : undefined,
+  };
+}
+
 function tagLabelOf(tags: ActivityTag[], a: Activity): string {
-  const id = a.tagId || a.category;
+  const id = activityTagKey(a);
+  if (!id) return UNTAGGED_LABEL;
   return tags.find((t) => t.id === id)?.label ?? String(id);
 }
 
@@ -88,7 +93,10 @@ export function toCsv(records: Activity[], tags: ActivityTag[], fields: CsvField
       tagLabelOf(tags, a),
     ];
     if (fields.moodWeather) {
-      cells.push(a.mood ? MOOD_LABEL[a.mood] : '', a.weather ? WEATHER_LABEL[a.weather] : '');
+      cells.push(
+        a.mood ? MOOD_MAP[a.mood]?.label ?? '' : '',
+        a.weather ? WEATHER_MAP[a.weather]?.label ?? '' : '',
+      );
     }
     if (fields.note) cells.push(a.note ?? '');
     lines.push(cells.map((c) => csvEscape(String(c))).join(','));
@@ -101,7 +109,7 @@ export function toJson(records: Activity[], tags: ActivityTag[]): string {
   const arr = records.map((a) => ({
     title: a.title,
     tag: tagLabelOf(tags, a),
-    tagId: a.tagId || a.category,
+    tagId: activityTagKey(a) ?? null,
     mood: a.mood ?? null,
     weather: a.weather ?? null,
     note: a.note ?? null,
@@ -156,7 +164,7 @@ export function parseBackup(text: string): RestoredData {
     throw new Error('不是有效的备份文件');
   }
   return {
-    activities: data.activities as Activity[],
+    activities: (data.activities as Activity[]).map(sanitizeActivity),
     items: Array.isArray(data.items) ? (data.items as ActivityItem[]) : [],
     tags: Array.isArray(data.tags) ? (data.tags as ActivityTag[]) : [],
   };

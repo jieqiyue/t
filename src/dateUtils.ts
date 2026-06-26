@@ -32,6 +32,26 @@ export function isSameDay(a: Date, b: Date): boolean {
   );
 }
 
+/** A new Date `n` days from `d` (n may be negative). Time-of-day is preserved. */
+export function addDays(d: Date, n: number): Date {
+  const next = new Date(d);
+  next.setDate(next.getDate() + n);
+  return next;
+}
+
+/** Relative label of `d` vs `today`: 今天 / 昨天 / 前天 / N 天前 (and 明天 / N 天后). */
+export function relativeDayLabel(d: Date, today: Date): string {
+  const a = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const b = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+  const diff = Math.round((b - a) / 86400000); // today − d; positive = past
+  if (diff === 0) return '今天';
+  if (diff === 1) return '昨天';
+  if (diff === 2) return '前天';
+  if (diff > 0) return `${diff} 天前`;
+  if (diff === -1) return '明天';
+  return `${-diff} 天后`;
+}
+
 export function daysInMonth(year: number, month: number): number {
   return new Date(year, month + 1, 0).getDate();
 }

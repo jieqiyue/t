@@ -17,7 +17,7 @@ export interface ActivityTag {
 export interface ActivityItem {
   id: string;
   title: string;
-  tagId: ActivityTag['id'];
+  tagId?: ActivityTag['id'];
   createdAt: number;
   archived?: boolean;
 }
@@ -40,7 +40,7 @@ export interface Activity {
 export interface NewRecordInput {
   itemId: ActivityItem['id'];
   title: string;
-  tagId: ActivityTag['id'];
+  tagId?: ActivityTag['id'];
   note?: string;
   mood?: MoodId;
   weather?: WeatherId;

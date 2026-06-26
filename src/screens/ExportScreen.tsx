@@ -19,6 +19,7 @@ import {
   toJson,
 } from '../exporters';
 import { CheckIcon, DownloadIcon, ShareIcon } from '../components/moodWeather';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 interface Props {
   activities: Activity[];
@@ -321,34 +322,17 @@ export default function ExportScreen({
 
       {/* Restore confirm */}
       {pendingRestore && (
-        <View style={styles.confirmOverlay}>
-          <Pressable style={styles.confirmScrim} onPress={() => setPendingRestore(null)} />
-          <View style={styles.confirmCard}>
-            <Text style={styles.confirmTitle}>从备份恢复</Text>
-            <Text style={styles.confirmBody}>
-              将用备份中的 {pendingRestore.activities.length} 条记录、{pendingRestore.items.length} 个事件、
-              {pendingRestore.tags.length} 个标签覆盖当前数据，此操作无法撤销。
-            </Text>
-            <View style={styles.confirmActions}>
-              <Pressable
-                onPress={() => setPendingRestore(null)}
-                style={[styles.confirmButton, styles.cancelButton]}
-              >
-                <Text style={styles.cancelText}>取消</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  onRestore(pendingRestore);
-                  setPendingRestore(null);
-                  setNotice('已从备份恢复。');
-                }}
-                style={[styles.confirmButton, styles.restoreButton]}
-              >
-                <Text style={styles.restoreText}>确认恢复</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
+        <ConfirmDialog
+          title="从备份恢复"
+          message={`将用备份中的 ${pendingRestore.activities.length} 条记录、${pendingRestore.items.length} 个事件、${pendingRestore.tags.length} 个标签覆盖当前数据，此操作无法撤销。`}
+          confirmLabel="确认恢复"
+          onConfirm={() => {
+            onRestore(pendingRestore);
+            setPendingRestore(null);
+            setNotice('已从备份恢复。');
+          }}
+          onCancel={() => setPendingRestore(null)}
+        />
       )}
     </View>
   );
@@ -438,7 +422,7 @@ const createStyles = (c: Palette) => StyleSheet.create({
     shadowRadius: 30,
     elevation: 24,
   },
-  grabber: { width: 38, height: 4, borderRadius: 999, backgroundColor: '#DAD3C7', alignSelf: 'center' },
+  grabber: { width: 38, height: 4, borderRadius: 999, backgroundColor: c.divider, alignSelf: 'center' },
   sheetHead: { flexDirection: 'row', alignItems: 'center', gap: 9 },
   sheetTitle: { fontSize: 16, fontWeight: '800', color: c.ink },
   sheetSub: { fontSize: 11, fontWeight: '600', color: c.muted3 },
@@ -483,36 +467,4 @@ const createStyles = (c: Palette) => StyleSheet.create({
   },
   exportDisabled: { opacity: 0.45 },
   exportText: { color: '#FFFFFF', fontSize: 14.5, fontWeight: '800', letterSpacing: 0.5 },
-
-  confirmOverlay: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 28,
-  },
-  confirmScrim: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: c.scrim },
-  confirmCard: {
-    width: '100%',
-    borderRadius: 20,
-    backgroundColor: c.sheet,
-    padding: 18,
-    gap: 12,
-    shadowColor: c.ink,
-    shadowOffset: { width: 0, height: 14 },
-    shadowOpacity: 0.18,
-    shadowRadius: 28,
-    elevation: 18,
-  },
-  confirmTitle: { fontSize: 18, fontWeight: '800', color: c.ink },
-  confirmBody: { fontSize: 13, fontWeight: '500', color: c.muted, lineHeight: 20 },
-  confirmActions: { flexDirection: 'row', gap: 10, marginTop: 4 },
-  confirmButton: { flex: 1, alignItems: 'center', borderRadius: 14, paddingVertical: 12 },
-  cancelButton: { backgroundColor: c.inputBg },
-  restoreButton: { backgroundColor: '#9B6E64' },
-  cancelText: { fontSize: 14, fontWeight: '800', color: c.muted },
-  restoreText: { fontSize: 14, fontWeight: '800', color: '#FFFFFF' },
 });

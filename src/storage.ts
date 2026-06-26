@@ -9,6 +9,8 @@ import {
   MoodId,
   WeatherId,
 } from './types';
+import { activityTagKey } from './tagUtils';
+import { newId } from './ids';
 
 const KEY = 'dal.activities.v1';
 const SEED_FLAG = 'dal.seeded.v1';
@@ -115,12 +117,6 @@ export async function clearAllData(): Promise<void> {
   ]);
 }
 
-let counter = 0;
-function newId(): string {
-  counter += 1;
-  return `${Date.now().toString(36)}-${counter}`;
-}
-
 function at(year: number, month: number, day: number, h: number, m = 0): number {
   return new Date(year, month, day, h, m).getTime();
 }
@@ -137,14 +133,24 @@ function push(
 
 function buildItemsFromActivities(activities: Activity[]): ActivityItem[] {
   const map = new Map<string, ActivityItem>();
+  const usedIds = new Set<string>();
 
   for (const activity of activities) {
-    const key = `${activity.title}::${activity.tagId || activity.category}`;
+    const tagKey = activityTagKey(activity);
+    const key = `${activity.title}::${tagKey ?? 'untagged'}`;
     if (map.has(key)) continue;
+    // slug() can collapse distinct titles (emoji/punctuation-only, or sharing the
+    // first 24 chars) to the same string. The map key above already dedups by full
+    // title, so disambiguate the derived id to keep every item id unique.
+    const base = `item-${slug(activity.title)}-${tagKey ?? 'untagged'}`;
+    let id = base;
+    let n = 2;
+    while (usedIds.has(id)) id = `${base}-${n++}`;
+    usedIds.add(id);
     map.set(key, {
-      id: `item-${slug(activity.title)}-${activity.tagId || activity.category}`,
+      id,
       title: activity.title,
-      tagId: activity.tagId || activity.category,
+      tagId: tagKey,
       createdAt: activity.timestamp,
     });
   }

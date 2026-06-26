@@ -1,8 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Palette, useTheme } from '../theme';
+import { Palette, UNTAGGED_LABEL, useTheme } from '../theme';
 import { ActivityItem, ActivityTag } from '../types';
+import { newId } from '../ids';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 interface Props {
   items: ActivityItem[];
@@ -25,11 +27,11 @@ export default function ManageItemsScreen({
   const c = useTheme();
   const styles = useMemo(() => createStyles(c), [c]);
   const [title, setTitle] = useState('');
-  const [tagId, setTagId] = useState(() => tags[0]?.id || 'life');
+  const [tagId, setTagId] = useState<ActivityTag['id'] | null>(null);
   const [pendingArchive, setPendingArchive] = useState<ActivityItem | null>(null);
   const [pendingDelete, setPendingDelete] = useState<ActivityItem | null>(null);
   const selectedTag = tags.find((tag) => tag.id === tagId) || null;
-  const canAddItem = !!title.trim() && !!selectedTag;
+  const canAddItem = !!title.trim();
   const visibleItems = useMemo(
     () => [
       ...items.filter((item) => !item.archived),
@@ -40,11 +42,11 @@ export default function ManageItemsScreen({
 
   const addItem = () => {
     const trimmed = title.trim();
-    if (!trimmed || !selectedTag) return;
+    if (!trimmed) return;
     const item: ActivityItem = {
-      id: `item-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6)}`,
+      id: newId('item-'),
       title: trimmed,
-      tagId: selectedTag.id,
+      tagId: selectedTag?.id,
       createdAt: Date.now(),
     };
     onChangeItems([item, ...items]);
@@ -102,6 +104,16 @@ export default function ManageItemsScreen({
             maxLength={40}
           />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tagRow}>
+            <Pressable
+              onPress={() => setTagId(null)}
+              style={[
+                styles.tagChip,
+                tagId == null && { backgroundColor: c.accent, borderColor: c.accent },
+              ]}
+            >
+              {tagId != null && <View style={[styles.dot, { backgroundColor: c.muted3 }]} />}
+              <Text style={[styles.tagText, tagId == null && styles.tagTextActive]}>无标签</Text>
+            </Pressable>
             {tags.map((tag) => {
               const active = tag.id === tagId;
               return (
@@ -117,7 +129,7 @@ export default function ManageItemsScreen({
             })}
           </ScrollView>
           {tags.length === 0 && (
-            <Text style={styles.formHint}>请先去「标签管理」添加至少一个标签，再创建事件。</Text>
+            <Text style={styles.formHint}>当前没有标签，也可以先创建无标签事件。</Text>
           )}
           <Pressable
             onPress={addItem}
@@ -141,7 +153,7 @@ export default function ManageItemsScreen({
                   <View style={styles.itemText}>
                     <Text style={[styles.itemTitle, item.archived && styles.archived]}>{item.title}</Text>
                     <Text style={[styles.itemTag, { color: tag?.text || c.muted3 }]}>
-                      {tag?.label || '未设置标签'}{item.archived ? ' · 已归档' : ''}
+                      {tag?.label || UNTAGGED_LABEL}{item.archived ? ' · 已归档' : ''}
                     </Text>
                   </View>
                   <Text style={styles.statHint}>统计 ›</Text>
@@ -162,55 +174,24 @@ export default function ManageItemsScreen({
       </ScrollView>
 
       {pendingArchive && (
-        <View style={styles.confirmOverlay}>
-          <Pressable style={styles.confirmScrim} onPress={() => setPendingArchive(null)} />
-          <View style={styles.confirmCard}>
-            <Text style={styles.confirmTitle}>归档事件</Text>
-            <Text style={styles.confirmBody}>
-              归档「{pendingArchive.title}」后，它将不再出现在快捷记录的选择列表里，历史记录和统计不会删除。
-            </Text>
-            <View style={styles.confirmActions}>
-              <Pressable
-                onPress={() => setPendingArchive(null)}
-                style={[styles.confirmButton, styles.cancelButton]}
-              >
-                <Text style={styles.cancelText}>取消</Text>
-              </Pressable>
-              <Pressable
-                onPress={confirmArchive}
-                style={[styles.confirmButton, styles.archiveButton]}
-              >
-                <Text style={styles.archiveText}>确认归档</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
+        <ConfirmDialog
+          title="归档事件"
+          message={`归档「${pendingArchive.title}」后，它将不再出现在快捷记录的选择列表里，历史记录和统计不会删除。`}
+          confirmLabel="确认归档"
+          confirmColor="#C9A9A0"
+          onConfirm={confirmArchive}
+          onCancel={() => setPendingArchive(null)}
+        />
       )}
 
       {pendingDelete && (
-        <View style={styles.confirmOverlay}>
-          <Pressable style={styles.confirmScrim} onPress={() => setPendingDelete(null)} />
-          <View style={styles.confirmCard}>
-            <Text style={styles.confirmTitle}>删除事件</Text>
-            <Text style={styles.confirmBody}>
-              删除「{pendingDelete.title}」会一并清除它的所有历史记录和统计，且无法恢复。若只是想暂时不再记录、保留历史，请改用「归档」。
-            </Text>
-            <View style={styles.confirmActions}>
-              <Pressable
-                onPress={() => setPendingDelete(null)}
-                style={[styles.confirmButton, styles.cancelButton]}
-              >
-                <Text style={styles.cancelText}>取消</Text>
-              </Pressable>
-              <Pressable
-                onPress={confirmDelete}
-                style={[styles.confirmButton, styles.deleteButton]}
-              >
-                <Text style={styles.archiveText}>确认删除</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
+        <ConfirmDialog
+          title="删除事件"
+          message={`删除「${pendingDelete.title}」会一并清除它的所有历史记录和统计，且无法恢复。若只是想暂时不再记录、保留历史，请改用「归档」。`}
+          confirmLabel="确认删除"
+          onConfirm={confirmDelete}
+          onCancel={() => setPendingDelete(null)}
+        />
       )}
     </View>
   );
@@ -279,43 +260,4 @@ const createStyles = (c: Palette) => StyleSheet.create({
   smallButton: { paddingHorizontal: 8, paddingVertical: 6, borderRadius: 999, backgroundColor: c.inputBg },
   smallButtonText: { fontSize: 11, fontWeight: '800', color: c.muted },
   deleteText: { fontSize: 11, fontWeight: '800', color: '#9B6E64' },
-  confirmOverlay: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 28,
-  },
-  confirmScrim: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-    backgroundColor: c.scrim,
-  },
-  confirmCard: {
-    width: '100%',
-    borderRadius: 20,
-    backgroundColor: c.sheet,
-    padding: 18,
-    gap: 12,
-    shadowColor: c.ink,
-    shadowOffset: { width: 0, height: 14 },
-    shadowOpacity: 0.18,
-    shadowRadius: 28,
-    elevation: 18,
-  },
-  confirmTitle: { fontSize: 18, fontWeight: '800', color: c.ink },
-  confirmBody: { fontSize: 13, fontWeight: '500', color: c.muted, lineHeight: 20 },
-  confirmActions: { flexDirection: 'row', gap: 10, marginTop: 4 },
-  confirmButton: { flex: 1, alignItems: 'center', borderRadius: 14, paddingVertical: 12 },
-  cancelButton: { backgroundColor: c.inputBg },
-  archiveButton: { backgroundColor: '#C9A9A0' },
-  deleteButton: { backgroundColor: '#9B6E64' },
-  cancelText: { fontSize: 14, fontWeight: '800', color: c.muted },
-  archiveText: { fontSize: 14, fontWeight: '800', color: '#FFFFFF' },
 });

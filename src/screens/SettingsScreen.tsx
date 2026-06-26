@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Palette, THEME_LIST, ThemeId, useTheme } from '../theme';
 import { ActivityOverviewStyle } from '../types';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 interface Props {
   overviewStyle: ActivityOverviewStyle;
@@ -174,26 +175,13 @@ export default function SettingsScreen({
       </ScrollView>
 
       {confirmClearOpen && (
-        <View style={styles.confirmOverlay}>
-          <Pressable style={styles.confirmScrim} onPress={() => setConfirmClearOpen(false)} />
-          <View style={styles.confirmCard}>
-            <Text style={styles.confirmTitle}>清除所有数据</Text>
-            <Text style={styles.confirmBody}>
-              此操作会删除所有记录、事件、标签和设置，并恢复为空白状态。清除后无法恢复。
-            </Text>
-            <View style={styles.confirmActions}>
-              <Pressable
-                onPress={() => setConfirmClearOpen(false)}
-                style={[styles.confirmButton, styles.cancelButton]}
-              >
-                <Text style={styles.cancelText}>取消</Text>
-              </Pressable>
-              <Pressable onPress={confirmClear} style={[styles.confirmButton, styles.clearButton]}>
-                <Text style={styles.clearText}>确认清除</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
+        <ConfirmDialog
+          title="清除所有数据"
+          message="此操作会删除所有记录、事件、标签和设置，并恢复为空白状态。清除后无法恢复。"
+          confirmLabel="确认清除"
+          onConfirm={confirmClear}
+          onCancel={() => setConfirmClearOpen(false)}
+        />
       )}
     </View>
   );
@@ -308,36 +296,4 @@ const createStyles = (c: Palette) => StyleSheet.create({
   currentDesc: { fontSize: 12, fontWeight: '600', color: c.muted3 },
   currentDots: { flexDirection: 'row', gap: 6 },
   currentDot: { width: 12, height: 12, borderRadius: 999 },
-
-  confirmOverlay: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 28,
-  },
-  confirmScrim: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: c.scrim },
-  confirmCard: {
-    width: '100%',
-    borderRadius: 20,
-    backgroundColor: c.sheet,
-    padding: 18,
-    gap: 12,
-    shadowColor: c.ink,
-    shadowOffset: { width: 0, height: 14 },
-    shadowOpacity: 0.18,
-    shadowRadius: 28,
-    elevation: 18,
-  },
-  confirmTitle: { fontSize: 18, fontWeight: '800', color: c.ink },
-  confirmBody: { fontSize: 13, fontWeight: '500', color: c.muted, lineHeight: 20 },
-  confirmActions: { flexDirection: 'row', gap: 10, marginTop: 4 },
-  confirmButton: { flex: 1, alignItems: 'center', borderRadius: 14, paddingVertical: 12 },
-  cancelButton: { backgroundColor: c.inputBg },
-  clearButton: { backgroundColor: '#9B6E64' },
-  cancelText: { fontSize: 14, fontWeight: '800', color: c.muted },
-  clearText: { fontSize: 14, fontWeight: '800', color: '#FFFFFF' },
 });

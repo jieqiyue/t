@@ -7,10 +7,19 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CATEGORY_MAP, Palette, useTheme } from '../theme';
+import { Palette, useTheme } from '../theme';
 import { Activity, ActivityTag } from '../types';
-import { encouragementFor, isSameDay, longDateLabel, timeLabel } from '../dateUtils';
+import { resolveActivityTag } from '../tagUtils';
+import {
+  addDays,
+  encouragementFor,
+  isSameDay,
+  longDateLabel,
+  relativeDayLabel,
+  timeLabel,
+} from '../dateUtils';
 import { MOOD_MAP, MoodFace, StarIcon, WEATHER_MAP, WeatherIcon } from '../components/moodWeather';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 interface Props {
   activities: Activity[];
@@ -37,15 +46,21 @@ export default function TimelineScreen({
   const c = useTheme();
   const styles = useMemo(() => createStyles(c), [c]);
   const today = useMemo(() => new Date(), []);
+  const [viewDate, setViewDate] = useState(() => new Date());
   const [pendingDelete, setPendingDelete] = useState<Activity | null>(null);
+  const isToday = isSameDay(viewDate, today);
 
-  const todays = useMemo(
+  const dayRecords = useMemo(
     () =>
       activities
-        .filter((a) => isSameDay(new Date(a.timestamp), today))
+        .filter((a) => isSameDay(new Date(a.timestamp), viewDate))
         .sort((a, b) => a.timestamp - b.timestamp),
-    [activities, today],
+    [activities, viewDate],
   );
+
+  // Browse earlier days; never step past today (no future records to show).
+  const goPrev = () => setViewDate((d) => addDays(d, -1));
+  const goNext = () => setViewDate((d) => (isSameDay(d, today) ? d : addDays(d, 1)));
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
@@ -53,13 +68,28 @@ export default function TimelineScreen({
         contentContainerStyle={[styles.scroll, { paddingBottom: 120 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Date header */}
+        {/* Date header with prev/next-day navigation */}
         <View style={styles.header}>
-          <Text style={styles.bigDay}>{today.getDate()}</Text>
+          <Pressable onPress={goPrev} style={styles.navBtn} hitSlop={8}>
+            <Text style={styles.navChevron}>‹</Text>
+          </Pressable>
+          <Text style={styles.bigDay}>{viewDate.getDate()}</Text>
           <View style={styles.headerText}>
-            <Text style={styles.dateLabel}>{longDateLabel(today)}</Text>
-            <Text style={styles.encourage}>{encouragementFor(today)}</Text>
+            <Text style={styles.dateLabel}>{longDateLabel(viewDate)}</Text>
+            <View style={[styles.dayPill, !isToday && styles.dayPillPast]}>
+              <Text style={[styles.dayPillText, !isToday && styles.dayPillTextPast]}>
+                {relativeDayLabel(viewDate, today)}
+              </Text>
+            </View>
           </View>
+          <Pressable
+            onPress={goNext}
+            disabled={isToday}
+            style={[styles.navBtn, isToday && styles.navBtnDisabled]}
+            hitSlop={8}
+          >
+            <Text style={[styles.navChevron, isToday && styles.navChevronDisabled]}>›</Text>
+          </Pressable>
           <Pressable onPress={onOpenSummary} style={styles.iconButton} hitSlop={10}>
             <StarIcon color={c.muted} size={16} />
           </Pressable>
@@ -71,6 +101,7 @@ export default function TimelineScreen({
             </View>
           </Pressable>
         </View>
+        <Text style={styles.encourage}>{encouragementFor(viewDate)}</Text>
 
         <Pressable
           onPress={onOpenAllActivities}
@@ -87,21 +118,23 @@ export default function TimelineScreen({
 
         {/* Section divider */}
         <View style={styles.sectionRow}>
-          <Text style={styles.sectionTitle}>今 日 记 录</Text>
+          <Text style={styles.sectionTitle}>{isToday ? '今 日 记 录' : '当 日 记 录'}</Text>
           <View style={styles.sectionLine} />
-          <Text style={styles.sectionCount}>{todays.length}</Text>
+          <Text style={styles.sectionCount}>{dayRecords.length}</Text>
         </View>
 
-        {todays.length === 0 ? (
+        {dayRecords.length === 0 ? (
           <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>今天还没有记录</Text>
-            <Text style={styles.emptyHint}>点击右下角的「＋记录」，写下此刻吧。</Text>
+            <Text style={styles.emptyTitle}>{isToday ? '今天还没有记录' : '这一天没有记录'}</Text>
+            <Text style={styles.emptyHint}>
+              {isToday ? '点击右下角的「＋记录」，写下此刻吧。' : '换一天看看，或回到今天记录新的一刻。'}
+            </Text>
           </View>
         ) : (
           <View style={styles.timeline}>
             <View style={styles.rail} />
-            {todays.map((a) => {
-              const cat = tags.find((tag) => tag.id === (a.tagId || a.category)) || CATEGORY_MAP[a.category];
+            {dayRecords.map((a) => {
+              const cat = resolveActivityTag(c, tags, a);
               return (
                 <View key={a.id} style={styles.row}>
                   <Pressable
@@ -158,7 +191,10 @@ export default function TimelineScreen({
 
       {/* Floating record button */}
       <Pressable
-        onPress={onOpenRecord}
+        onPress={() => {
+          if (!isToday) setViewDate(new Date());
+          onOpenRecord();
+        }}
         style={({ pressed }) => [
           styles.fab,
           { bottom: 28 + insets.bottom },
@@ -170,32 +206,16 @@ export default function TimelineScreen({
       </Pressable>
 
       {pendingDelete && (
-        <View style={styles.confirmOverlay}>
-          <Pressable style={styles.confirmScrim} onPress={() => setPendingDelete(null)} />
-          <View style={styles.confirmCard}>
-            <Text style={styles.confirmTitle}>删除记录</Text>
-            <Text style={styles.confirmBody}>
-              删除「{pendingDelete.title}」这条记录后将无法恢复，统计也会相应减少。
-            </Text>
-            <View style={styles.confirmActions}>
-              <Pressable
-                onPress={() => setPendingDelete(null)}
-                style={[styles.confirmButton, styles.cancelButton]}
-              >
-                <Text style={styles.cancelText}>取消</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  onDeleteActivity(pendingDelete.id);
-                  setPendingDelete(null);
-                }}
-                style={[styles.confirmButton, styles.deleteButton]}
-              >
-                <Text style={styles.deleteConfirmText}>确认删除</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
+        <ConfirmDialog
+          title="删除记录"
+          message={`删除「${pendingDelete.title}」这条记录后将无法恢复，统计也会相应减少。`}
+          confirmLabel="确认删除"
+          onConfirm={() => {
+            onDeleteActivity(pendingDelete.id);
+            setPendingDelete(null);
+          }}
+          onCancel={() => setPendingDelete(null)}
+        />
       )}
     </View>
   );
@@ -204,11 +224,37 @@ export default function TimelineScreen({
 const createStyles = (c: Palette) => StyleSheet.create({
   root: { flex: 1, backgroundColor: c.bg },
   scroll: { paddingHorizontal: 22, paddingTop: 6 },
-  header: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingTop: 12 },
-  bigDay: { fontSize: 54, fontWeight: '800', color: c.ink, lineHeight: 54 },
-  headerText: { paddingTop: 6, gap: 5, flex: 1 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 12 },
+  navBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 999,
+    backgroundColor: c.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: c.ink,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 1,
+  },
+  navBtnDisabled: { backgroundColor: c.bgAlt, shadowOpacity: 0, elevation: 0 },
+  navChevron: { fontSize: 22, color: c.muted, marginTop: -3, fontWeight: '500' },
+  navChevronDisabled: { color: c.muted3, opacity: 0.5 },
+  bigDay: { fontSize: 52, fontWeight: '800', color: c.ink, lineHeight: 52 },
+  headerText: { gap: 6, flex: 1, paddingLeft: 2 },
   dateLabel: { fontSize: 14, fontWeight: '800', color: c.ink, letterSpacing: 0.5 },
-  encourage: { fontSize: 13, color: c.muted2, fontWeight: '500', lineHeight: 19 },
+  dayPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: c.accentSoft,
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 2.5,
+  },
+  dayPillPast: { backgroundColor: c.inputBg },
+  dayPillText: { fontSize: 11, fontWeight: '800', color: c.accent, letterSpacing: 0.3 },
+  dayPillTextPast: { color: c.muted2 },
+  encourage: { marginTop: 12, fontSize: 13, color: c.muted2, fontWeight: '500', lineHeight: 19 },
   iconButton: {
     width: 32,
     height: 32,
@@ -313,35 +359,4 @@ const createStyles = (c: Palette) => StyleSheet.create({
   fabPressed: { transform: [{ scale: 0.96 }], opacity: 0.92 },
   fabPlus: { color: '#FFFFFF', fontSize: 18, fontWeight: '400', lineHeight: 20 },
   fabText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
-  confirmOverlay: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 28,
-  },
-  confirmScrim: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: c.scrim },
-  confirmCard: {
-    width: '100%',
-    borderRadius: 20,
-    backgroundColor: c.sheet,
-    padding: 18,
-    gap: 12,
-    shadowColor: c.ink,
-    shadowOffset: { width: 0, height: 14 },
-    shadowOpacity: 0.18,
-    shadowRadius: 28,
-    elevation: 18,
-  },
-  confirmTitle: { fontSize: 18, fontWeight: '800', color: c.ink },
-  confirmBody: { fontSize: 13, fontWeight: '500', color: c.muted, lineHeight: 20 },
-  confirmActions: { flexDirection: 'row', gap: 10, marginTop: 4 },
-  confirmButton: { flex: 1, alignItems: 'center', borderRadius: 14, paddingVertical: 12 },
-  cancelButton: { backgroundColor: c.inputBg },
-  deleteButton: { backgroundColor: '#9B6E64' },
-  cancelText: { fontSize: 14, fontWeight: '800', color: c.muted },
-  deleteConfirmText: { fontSize: 14, fontWeight: '800', color: '#FFFFFF' },
 });

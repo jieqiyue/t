@@ -1,9 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CATEGORY_MAP, Palette, useTheme } from '../theme';
+import { Palette, useTheme } from '../theme';
 import { Activity, ActivityTag, MoodId, WeatherId } from '../types';
+import { resolveActivityTag } from '../tagUtils';
 import { MOOD_MAP, MOODS, MoodFace, WEATHER_MAP, WEATHERS, WeatherIcon } from '../components/moodWeather';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 interface Props {
   activity: Activity;
@@ -40,7 +42,7 @@ export default function RecordDetailScreen({
   const [when, setWhen] = useState(() => new Date(activity.timestamp));
   const [pendingDelete, setPendingDelete] = useState(false);
 
-  const tag = tags.find((t) => t.id === (activity.tagId || activity.category)) || CATEGORY_MAP[activity.category];
+  const tag = resolveActivityTag(c, tags, activity);
 
   const startEdit = () => {
     setNote(activity.note ?? '');
@@ -68,12 +70,12 @@ export default function RecordDetailScreen({
   };
   const shiftHour = (delta: number) => {
     const d = new Date(when);
-    d.setHours((d.getHours() + delta + 24) % 24);
+    d.setHours(d.getHours() + delta); // carries into the day, like shiftDay
     setWhen(d);
   };
   const shiftMin = (delta: number) => {
     const d = new Date(when);
-    d.setMinutes((d.getMinutes() + delta + 60) % 60);
+    d.setMinutes(d.getMinutes() + delta); // carries into the hour
     setWhen(d);
   };
 
@@ -202,7 +204,7 @@ export default function RecordDetailScreen({
         </View>
 
         <View style={styles.catRow}>
-          <View style={[styles.catChip, { backgroundColor: tag.soft || c.accentSoft }]}>
+          <View style={[styles.catChip, { backgroundColor: tag.soft }]}>
             <View style={[styles.catDot, { backgroundColor: tag.dot }]} />
             <Text style={[styles.catText, { color: tag.text }]}>
               {tag.label} · {activity.title}
@@ -259,23 +261,13 @@ export default function RecordDetailScreen({
       </ScrollView>
 
       {pendingDelete && (
-        <View style={styles.confirmOverlay}>
-          <Pressable style={styles.confirmScrim} onPress={() => setPendingDelete(false)} />
-          <View style={styles.confirmCard}>
-            <Text style={styles.confirmTitle}>删除记录</Text>
-            <Text style={styles.confirmBody}>
-              删除「{activity.title}」这条记录后将无法恢复，统计也会相应减少。
-            </Text>
-            <View style={styles.confirmActions}>
-              <Pressable onPress={() => setPendingDelete(false)} style={[styles.confirmButton, styles.cancelButton]}>
-                <Text style={styles.cancelText}>取消</Text>
-              </Pressable>
-              <Pressable onPress={() => onDelete(activity.id)} style={[styles.confirmButton, styles.deleteButton]}>
-                <Text style={styles.deleteConfirmText}>确认删除</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
+        <ConfirmDialog
+          title="删除记录"
+          message={`删除「${activity.title}」这条记录后将无法恢复，统计也会相应减少。`}
+          confirmLabel="确认删除"
+          onConfirm={() => onDelete(activity.id)}
+          onCancel={() => setPendingDelete(false)}
+        />
       )}
     </View>
   );
@@ -415,35 +407,4 @@ const createStyles = (c: Palette) => StyleSheet.create({
   pressed: { opacity: 0.9 },
   saveText: { fontSize: 15, fontWeight: '800', color: '#FFFFFF', letterSpacing: 3 },
 
-  confirmOverlay: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 28,
-  },
-  confirmScrim: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: c.scrim },
-  confirmCard: {
-    width: '100%',
-    borderRadius: 20,
-    backgroundColor: c.sheet,
-    padding: 18,
-    gap: 12,
-    shadowColor: c.ink,
-    shadowOffset: { width: 0, height: 14 },
-    shadowOpacity: 0.18,
-    shadowRadius: 28,
-    elevation: 18,
-  },
-  confirmTitle: { fontSize: 18, fontWeight: '800', color: c.ink },
-  confirmBody: { fontSize: 13, fontWeight: '500', color: c.muted, lineHeight: 20 },
-  confirmActions: { flexDirection: 'row', gap: 10, marginTop: 4 },
-  confirmButton: { flex: 1, alignItems: 'center', borderRadius: 14, paddingVertical: 12 },
-  cancelButton: { backgroundColor: c.inputBg },
-  deleteButton: { backgroundColor: '#9B6E64' },
-  cancelText: { fontSize: 14, fontWeight: '800', color: c.muted },
-  deleteConfirmText: { fontSize: 14, fontWeight: '800', color: '#FFFFFF' },
 });

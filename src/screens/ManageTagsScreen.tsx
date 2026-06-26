@@ -3,6 +3,8 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Palette, useTheme } from '../theme';
 import { Activity, ActivityItem, ActivityTag } from '../types';
+import { newId } from '../ids';
+import { activityTagKey } from '../tagUtils';
 
 interface Props {
   tags: ActivityTag[];
@@ -34,7 +36,7 @@ export default function ManageTagsScreen({ tags, items, activities, onChangeTags
   // A tag is "in use" if any event OR any logged record still references it.
   const isTagInUse = (id: ActivityTag['id']) =>
     items.some((item) => item.tagId === id) ||
-    activities.some((activity) => (activity.tagId || activity.category) === id);
+    activities.some((activity) => activityTagKey(activity) === id);
   const isDefaultTag = (id: ActivityTag['id']) => DEFAULT_TAG_IDS.includes(id as string);
   const canDeleteTag = (id: ActivityTag['id']) =>
     !isTagInUse(id) && !isDefaultTag(id) && tags.length > 1;
@@ -45,7 +47,7 @@ export default function ManageTagsScreen({ tags, items, activities, onChangeTags
     const palette = PALETTE[paletteIndex];
     onChangeTags([
       {
-        id: `tag-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6)}`,
+        id: newId('tag-'),
         label: trimmed,
         ...palette,
       },

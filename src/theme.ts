@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react';
-import { CategoryId } from './types';
+import { ActivityTag, CategoryId } from './types';
 
 export type ThemeId = 'cream' | 'dusk' | 'caramel' | 'night';
 
@@ -218,3 +218,31 @@ export const CATEGORY_MAP: Record<CategoryId, Category> = CATEGORIES.reduce(
   },
   {} as Record<CategoryId, Category>,
 );
+
+export interface TagView {
+  dot: string;
+  text: string;
+  soft: string;
+  label: string;
+}
+
+/** Single label for "no (resolvable) tag" — used wherever an untagged or
+ *  deleted-tag record is shown (filters, clouds, totals, detail, export). */
+export const UNTAGGED_LABEL = '未分类';
+
+/**
+ * Resolve how a tag should display: prefer the stored custom tag, then a
+ * built-in default category, then a neutral "未分类" fallback (so a deleted
+ * custom tag never silently masquerades as 生活).
+ */
+export function resolveTag(
+  palette: Palette,
+  tags: ActivityTag[],
+  idOrCategory: ActivityTag['id'],
+): TagView {
+  const tag = tags.find((t) => t.id === idOrCategory);
+  if (tag) return { dot: tag.dot, text: tag.text, soft: tag.soft, label: tag.label };
+  const def = CATEGORY_MAP[idOrCategory as CategoryId];
+  if (def) return { dot: def.dot, text: def.text, soft: def.soft, label: def.label };
+  return { dot: palette.muted3, text: palette.muted, soft: palette.inputBg, label: UNTAGGED_LABEL };
+}

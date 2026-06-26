@@ -1,12 +1,14 @@
 import { Activity, ActivityTag, MoodId } from './types';
 import { dayKey, daysInMonth } from './dateUtils';
+import { activityTagKey } from './tagUtils';
+import { MOOD_MAP, MOOD_ORDER } from './moods';
 
 export type SummaryPeriod = 'week' | 'month';
 
 export interface TopActivity {
   title: string;
   count: number;
-  tagId: ActivityTag['id'];
+  tagId?: ActivityTag['id'];
 }
 
 export interface MoodSlice {
@@ -27,8 +29,6 @@ export interface PeriodSummary {
   dominantMood: MoodId | null;
   message: string;
 }
-
-const MOOD_ORDER: MoodId[] = ['great', 'good', 'ok', 'down', 'bad'];
 
 function periodRange(period: SummaryPeriod, now: Date): { start: Date; end: Date; totalDays: number } {
   if (period === 'week') {
@@ -61,17 +61,18 @@ export function buildSummary(activities: Activity[], period: SummaryPeriod, now:
 
   const days = new Set(inRange.map((a) => dayKey(new Date(a.timestamp))));
 
-  const byTitle = new Map<string, { count: number; latest: number; tagId: ActivityTag['id'] }>();
+  const byTitle = new Map<string, { count: number; latest: number; tagId?: ActivityTag['id'] }>();
   for (const a of inRange) {
     const cur = byTitle.get(a.title);
+    const tagKey = activityTagKey(a);
     if (cur) {
       cur.count += 1;
       if (a.timestamp > cur.latest) {
         cur.latest = a.timestamp;
-        cur.tagId = a.tagId || a.category;
+        cur.tagId = tagKey;
       }
     } else {
-      byTitle.set(a.title, { count: 1, latest: a.timestamp, tagId: a.tagId || a.category });
+      byTitle.set(a.title, { count: 1, latest: a.timestamp, tagId: tagKey });
     }
   }
   const top: TopActivity[] = [...byTitle.entries()]
@@ -112,14 +113,6 @@ export function buildSummary(activities: Activity[], period: SummaryPeriod, now:
   return summary;
 }
 
-const MOOD_LABEL: Record<MoodId, string> = {
-  great: '很好',
-  good: '不错',
-  ok: '一般',
-  down: '低落',
-  bad: '糟糕',
-};
-
 function buildMessage(s: PeriodSummary): string {
   const word = s.period === 'week' ? '这周' : '这个月';
   if (s.totalCount === 0) {
@@ -128,7 +121,7 @@ function buildMessage(s: PeriodSummary): string {
   let msg = `${word}你一共记录了 ${s.totalCount} 次，活跃了 ${s.activeDays} 天。`;
   if (s.top[0]) msg += `做得最多的是「${s.top[0].title}」。`;
   if (s.dominantMood) {
-    const label = MOOD_LABEL[s.dominantMood];
+    const label = MOOD_MAP[s.dominantMood].label;
     if (s.dominantMood === 'down' || s.dominantMood === 'bad') {
       msg += `心情大多${label}，记得好好照顾自己。`;
     } else {
