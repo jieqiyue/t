@@ -5,6 +5,7 @@ import { Palette, heatColor, heatLegend, useTheme } from '../theme';
 import { Activity, ActivityTag } from '../types';
 import { resolveActivityTag, untaggedView } from '../tagUtils';
 import { cnMonth, daysInMonth, mondayFirstIndex, timeLabel } from '../dateUtils';
+import { useToday } from '../useToday';
 import { MOOD_MAP, MoodFace, WEATHER_MAP, WeatherIcon } from '../components/moodWeather';
 
 interface Props {
@@ -20,7 +21,7 @@ export default function StatsScreen({ title, activities, tags, onBack }: Props) 
   const insets = useSafeAreaInsets();
   const c = useTheme();
   const styles = useMemo(() => createStyles(c), [c]);
-  const now = useMemo(() => new Date(), []);
+  const now = useToday();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth()); // 0-based
   const [selectedDay, setSelectedDay] = useState<number | null>(null);

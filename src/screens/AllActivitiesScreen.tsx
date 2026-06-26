@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Palette, UNTAGGED_LABEL, useTheme } from '../theme';
 import { Activity, ActivityOverviewStyle, ActivityTag } from '../types';
 import { activityTagKey, resolveOptionalTag, untaggedView } from '../tagUtils';
+import { SearchIcon } from '../components/moodWeather';
 
 interface Props {
   activities: Activity[];
@@ -12,6 +13,7 @@ interface Props {
   onBack: () => void;
   onOpenSettings: () => void;
   onOpenStats: (title: string) => void;
+  onOpenSearch: () => void;
 }
 
 interface ActivitySummary {
@@ -31,8 +33,10 @@ export default function AllActivitiesScreen({
   onBack,
   onOpenSettings,
   onOpenStats,
+  onOpenSearch,
 }: Props) {
   const insets = useSafeAreaInsets();
+  const c = useTheme();
   const styles = useThemedStyles();
   const [filter, setFilter] = useState<TagFilter>('all');
   const [cloudMode, setCloudMode] = useState<CloudMode>('frequency');
@@ -82,6 +86,9 @@ export default function AllActivitiesScreen({
               {summaries.length} 项 · 累计 {total} 次
             </Text>
           </View>
+          <Pressable onPress={onOpenSearch} style={styles.settingsButton} hitSlop={10}>
+            <SearchIcon color={c.muted} size={17} />
+          </Pressable>
           <Pressable onPress={onOpenSettings} style={styles.settingsButton} hitSlop={10}>
             <View style={styles.moreDots}>
               <View style={styles.moreDot} />

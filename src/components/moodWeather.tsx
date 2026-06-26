@@ -96,6 +96,16 @@ export function WeatherIcon({ id, color, size = 15 }: { id: WeatherId; color?: s
   );
 }
 
+/** Magnifier glyph for the search entry. */
+export function SearchIcon({ color = '#FFFFFF', size = 18 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx={11} cy={11} r={6.5} stroke={color} strokeWidth={1.9} />
+      <Path d="M16 16l4 4" stroke={color} strokeWidth={1.9} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
 /** Star glyph used by the summary entry and card badge. */
 export function StarIcon({ color = '#FFFFFF', size = 20 }: { color?: string; size?: number }) {
   return (

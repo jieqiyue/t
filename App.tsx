@@ -12,6 +12,7 @@ import RecordDoneScreen from './src/screens/RecordDoneScreen';
 import SummaryScreen from './src/screens/SummaryScreen';
 import ExportScreen from './src/screens/ExportScreen';
 import RecordDetailScreen from './src/screens/RecordDetailScreen';
+import SearchScreen from './src/screens/SearchScreen';
 import QuickRecordSheet from './src/components/QuickRecordSheet';
 import { RestoredData } from './src/exporters';
 import {
@@ -67,7 +68,8 @@ type Route =
   | { name: 'manageTags' }
   | { name: 'summary' }
   | { name: 'export' }
-  | { name: 'detail'; id: string }
+  | { name: 'search' }
+  | { name: 'detail'; id: string; from?: 'timeline' | 'search' }
   | { name: 'stats'; title: string; from: 'timeline' | 'activities' | 'manageItems' };
 
 export default function App() {
@@ -124,6 +126,10 @@ export default function App() {
             ? { name: 'manageItems' }
             : { name: 'timeline' },
         );
+        return true;
+      }
+      if (route.name === 'detail') {
+        setRoute(route.from === 'search' ? { name: 'search' } : { name: 'timeline' });
         return true;
       }
       if (route.name !== 'timeline') {
@@ -214,7 +220,7 @@ export default function App() {
   // If the record being viewed disappears (deleted / restored), leave the detail screen.
   useEffect(() => {
     if (route.name === 'detail' && !activities.find((a) => a.id === route.id)) {
-      setRoute({ name: 'timeline' });
+      setRoute(route.from === 'search' ? { name: 'search' } : { name: 'timeline' });
     }
   }, [route, activities]);
 
@@ -265,6 +271,7 @@ export default function App() {
             setRoute({ name: 'settings', from: 'activities' });
           }}
           onOpenStats={(title) => setRoute({ name: 'stats', title, from: 'activities' })}
+          onOpenSearch={() => setRoute({ name: 'search' })}
         />
       ) : route.name === 'settings' ? (
         <SettingsScreen
@@ -322,6 +329,13 @@ export default function App() {
           onRestore={restoreData}
           onBack={() => setRoute({ name: 'settings', from: settingsFrom })}
         />
+      ) : route.name === 'search' ? (
+        <SearchScreen
+          activities={activities}
+          tags={tags}
+          onOpenDetail={(id) => setRoute({ name: 'detail', id, from: 'search' })}
+          onBack={() => setRoute({ name: 'activities' })}
+        />
       ) : route.name === 'detail' ? (
         detailActivity ? (
           <RecordDetailScreen
@@ -329,11 +343,18 @@ export default function App() {
             tags={tags}
             onUpdate={updateActivity}
             onDelete={(id) => {
+              const backToSearch = route.name === 'detail' && route.from === 'search';
               deleteActivity(id);
-              setRoute({ name: 'timeline' });
+              setRoute(backToSearch ? { name: 'search' } : { name: 'timeline' });
             }}
             onOpenStats={(title) => setRoute({ name: 'stats', title, from: 'timeline' })}
-            onBack={() => setRoute({ name: 'timeline' })}
+            onBack={() =>
+              setRoute(
+                route.name === 'detail' && route.from === 'search'
+                  ? { name: 'search' }
+                  : { name: 'timeline' },
+              )
+            }
           />
         ) : null
       ) : (

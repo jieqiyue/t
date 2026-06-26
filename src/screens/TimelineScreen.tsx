@@ -20,6 +20,7 @@ import {
 } from '../dateUtils';
 import { MOOD_MAP, MoodFace, StarIcon, WEATHER_MAP, WeatherIcon } from '../components/moodWeather';
 import ConfirmDialog from '../components/ConfirmDialog';
+import { useToday } from '../useToday';
 
 interface Props {
   activities: Activity[];
@@ -45,7 +46,7 @@ export default function TimelineScreen({
   const insets = useSafeAreaInsets();
   const c = useTheme();
   const styles = useMemo(() => createStyles(c), [c]);
-  const today = useMemo(() => new Date(), []);
+  const today = useToday();
   const [viewDate, setViewDate] = useState(() => new Date());
   const [pendingDelete, setPendingDelete] = useState<Activity | null>(null);
   const isToday = isSameDay(viewDate, today);
