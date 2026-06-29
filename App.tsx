@@ -180,6 +180,15 @@ export default function App() {
     setActivities((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
   }, []);
 
+  const duplicateActivity = useCallback((activity: Activity) => {
+    const copy: Activity = {
+      ...activity,
+      id: newId(),
+      timestamp: Date.now(),
+    };
+    setActivities((prev) => [copy, ...prev]);
+  }, []);
+
   // Deleting an item is destructive: drop the item AND every record it produced
   // (matched by itemId, or by title+tag for seeded/legacy records with no itemId).
   const deleteItem = useCallback((item: ActivityItem) => {
@@ -340,8 +349,10 @@ export default function App() {
         detailActivity ? (
           <RecordDetailScreen
             activity={detailActivity}
+            items={items}
             tags={tags}
             onUpdate={updateActivity}
+            onDuplicate={duplicateActivity}
             onDelete={(id) => {
               const backToSearch = route.name === 'detail' && route.from === 'search';
               deleteActivity(id);

@@ -28,16 +28,30 @@ export default function ManageItemsScreen({
   const styles = useMemo(() => createStyles(c), [c]);
   const [title, setTitle] = useState('');
   const [tagId, setTagId] = useState<ActivityTag['id'] | null>(null);
+  const [query, setQuery] = useState('');
   const [pendingArchive, setPendingArchive] = useState<ActivityItem | null>(null);
   const [pendingDelete, setPendingDelete] = useState<ActivityItem | null>(null);
   const selectedTag = tags.find((tag) => tag.id === tagId) || null;
   const canAddItem = !!title.trim();
-  const visibleItems = useMemo(
-    () => [
-      ...items.filter((item) => !item.archived),
-      ...items.filter((item) => item.archived),
-    ],
+  const sortedActiveItems = useMemo(
+    () =>
+      [...items.filter((item) => !item.archived)].sort(
+        (a, b) => Number(!!b.pinned) - Number(!!a.pinned) || b.createdAt - a.createdAt,
+      ),
     [items],
+  );
+  const sortedArchivedItems = useMemo(
+    () => [...items.filter((item) => item.archived)].sort((a, b) => b.createdAt - a.createdAt),
+    [items],
+  );
+  const visibleItems = useMemo(
+    () => {
+      const keyword = query.trim().toLowerCase();
+      return [...sortedActiveItems, ...sortedArchivedItems].filter(
+        (item) => !keyword || item.title.toLowerCase().includes(keyword),
+      );
+    },
+    [query, sortedActiveItems, sortedArchivedItems],
   );
 
   const addItem = () => {
@@ -55,6 +69,10 @@ export default function ManageItemsScreen({
 
   const updateItem = (next: ActivityItem) => {
     onChangeItems(items.map((item) => (item.id === next.id ? next : item)));
+  };
+
+  const togglePin = (item: ActivityItem) => {
+    updateItem({ ...item, pinned: !item.pinned });
   };
 
   const toggleArchive = (item: ActivityItem) => {
@@ -140,8 +158,21 @@ export default function ManageItemsScreen({
           </Pressable>
         </View>
 
+        <TextInput
+          style={styles.searchInput}
+          value={query}
+          onChangeText={setQuery}
+          placeholder="搜索事件"
+          placeholderTextColor={c.muted3}
+          maxLength={40}
+        />
+
         <View style={styles.list}>
-          {visibleItems.map((item) => {
+          {visibleItems.length === 0 ? (
+            <View style={styles.emptyRow}>
+              <Text style={styles.emptyText}>{query.trim() ? '没有匹配的事件' : '还没有事件'}</Text>
+            </View>
+          ) : visibleItems.map((item) => {
             const tag = tags.find((candidate) => candidate.id === item.tagId) || null;
             return (
               <View key={item.id} style={styles.itemRow}>
@@ -151,13 +182,30 @@ export default function ManageItemsScreen({
                 >
                   <View style={[styles.dot, { backgroundColor: tag?.dot || c.muted3 }]} />
                   <View style={styles.itemText}>
-                    <Text style={[styles.itemTitle, item.archived && styles.archived]}>{item.title}</Text>
+                    <View style={styles.itemTitleLine}>
+                      {item.pinned && !item.archived && (
+                        <Text style={styles.pinBadge}>置顶</Text>
+                      )}
+                      <Text style={[styles.itemTitle, item.archived && styles.archived]} numberOfLines={1}>
+                        {item.title}
+                      </Text>
+                    </View>
                     <Text style={[styles.itemTag, { color: tag?.text || c.muted3 }]}>
                       {tag?.label || UNTAGGED_LABEL}{item.archived ? ' · 已归档' : ''}
                     </Text>
                   </View>
                   <Text style={styles.statHint}>统计 ›</Text>
                 </Pressable>
+                {!item.archived && (
+                  <Pressable
+                    onPress={() => togglePin(item)}
+                    style={[styles.smallButton, item.pinned && styles.pinButtonActive]}
+                  >
+                    <Text style={item.pinned ? styles.pinButtonActiveText : styles.smallButtonText}>
+                      {item.pinned ? '取消置顶' : '置顶'}
+                    </Text>
+                  </Pressable>
+                )}
                 <Pressable
                   onPress={() => toggleArchive(item)}
                   style={styles.smallButton}
@@ -241,7 +289,19 @@ const createStyles = (c: Palette) => StyleSheet.create({
   primaryButton: { backgroundColor: c.accent, borderRadius: 15, paddingVertical: 13, alignItems: 'center' },
   disabled: { opacity: 0.45 },
   primaryText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800', letterSpacing: 1 },
+  searchInput: {
+    marginTop: 14,
+    backgroundColor: c.card,
+    borderRadius: 15,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    color: c.ink,
+    fontSize: 14,
+    fontWeight: '600',
+  },
   list: { marginTop: 14, backgroundColor: c.card, borderRadius: 18, paddingHorizontal: 14 },
+  emptyRow: { paddingVertical: 22, alignItems: 'center' },
+  emptyText: { fontSize: 12.5, fontWeight: '700', color: c.muted3 },
   itemRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -254,10 +314,23 @@ const createStyles = (c: Palette) => StyleSheet.create({
   itemPressed: { opacity: 0.55 },
   statHint: { fontSize: 10, fontWeight: '800', color: c.accent, marginLeft: 2 },
   itemText: { flex: 1, minWidth: 0, gap: 3 },
-  itemTitle: { fontSize: 14, fontWeight: '800', color: c.ink },
+  itemTitleLine: { flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 0 },
+  pinBadge: {
+    backgroundColor: c.accentSoft,
+    color: c.accentInk,
+    borderRadius: 999,
+    overflow: 'hidden',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    fontSize: 9.5,
+    fontWeight: '800',
+  },
+  itemTitle: { flexShrink: 1, fontSize: 14, fontWeight: '800', color: c.ink },
   archived: { color: c.muted3, textDecorationLine: 'line-through' },
   itemTag: { fontSize: 11, fontWeight: '800' },
   smallButton: { paddingHorizontal: 8, paddingVertical: 6, borderRadius: 999, backgroundColor: c.inputBg },
   smallButtonText: { fontSize: 11, fontWeight: '800', color: c.muted },
+  pinButtonActive: { backgroundColor: c.accentSoft },
+  pinButtonActiveText: { fontSize: 11, fontWeight: '800', color: c.accentInk },
   deleteText: { fontSize: 11, fontWeight: '800', color: '#9B6E64' },
 });

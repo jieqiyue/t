@@ -19,6 +19,7 @@ export interface ActivityItem {
   title: string;
   tagId?: ActivityTag['id'];
   createdAt: number;
+  pinned?: boolean;
   archived?: boolean;
 }
 

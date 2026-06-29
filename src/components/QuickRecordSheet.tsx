@@ -40,8 +40,15 @@ export default function QuickRecordSheet({ visible, items, tags, onClose, onSubm
   const [adding, setAdding] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newTagId, setNewTagId] = useState<ActivityTag['id'] | null>(null);
+  const [query, setQuery] = useState('');
   const slide = useState(() => new Animated.Value(0))[0];
-  const activeItems = items.filter((item) => !item.archived);
+  const activeItems = useMemo(() => {
+    const keyword = query.trim().toLowerCase();
+    return items
+      .filter((item) => !item.archived)
+      .filter((item) => !keyword || item.title.toLowerCase().includes(keyword))
+      .sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned) || b.createdAt - a.createdAt);
+  }, [items, query]);
 
   useEffect(() => {
     if (visible) {
@@ -53,6 +60,7 @@ export default function QuickRecordSheet({ visible, items, tags, onClose, onSubm
       setAdding(false);
       setNewTitle('');
       setNewTagId(null);
+      setQuery('');
       slide.setValue(0);
       Animated.timing(slide, {
         toValue: 1,
@@ -88,6 +96,7 @@ export default function QuickRecordSheet({ visible, items, tags, onClose, onSubm
     setSelectedItemId(id);
     setAdding(false);
     setNewTitle('');
+    setQuery('');
   };
 
   return (
@@ -124,6 +133,14 @@ export default function QuickRecordSheet({ visible, items, tags, onClose, onSubm
                 {/* Event (required) */}
                 <View style={styles.section}>
                   <Text style={styles.sectionLabel}>选择事件</Text>
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="搜索事件"
+                    placeholderTextColor={c.muted3}
+                    value={query}
+                    onChangeText={setQuery}
+                    maxLength={40}
+                  />
                   <View style={styles.wrapRow}>
                     {activeItems.map((item) => {
                       const tag = tags.find((t) => t.id === item.tagId);
@@ -138,6 +155,7 @@ export default function QuickRecordSheet({ visible, items, tags, onClose, onSubm
                           ]}
                         >
                           {!active && <View style={[styles.eventDot, { backgroundColor: tag?.dot || c.muted3 }]} />}
+                          {item.pinned && <Text style={[styles.pinMark, active && styles.eventTextActive]}>置顶</Text>}
                           <Text style={[styles.eventText, active && styles.eventTextActive]}>
                             {item.title}
                           </Text>
@@ -153,7 +171,9 @@ export default function QuickRecordSheet({ visible, items, tags, onClose, onSubm
                   </View>
 
                   {activeItems.length === 0 && !adding && (
-                    <Text style={styles.eventHint}>还没有事件，点「＋ 添加」新建一个。</Text>
+                    <Text style={styles.eventHint}>
+                      {query.trim() ? '没有匹配的事件，可以点「＋ 添加」新建一个。' : '还没有事件，点「＋ 添加」新建一个。'}
+                    </Text>
                   )}
 
                   {adding && (
@@ -231,7 +251,7 @@ export default function QuickRecordSheet({ visible, items, tags, onClose, onSubm
                     value={note}
                     onChangeText={setNote}
                     multiline
-                    maxLength={140}
+                    maxLength={60}
                   />
                 </View>
 
@@ -357,6 +377,16 @@ const createStyles = (c: Palette) => StyleSheet.create({
     fontWeight: '600',
     color: c.ink,
   },
+  searchInput: {
+    backgroundColor: c.inputBg,
+    borderRadius: 13,
+    paddingHorizontal: 13,
+    paddingVertical: 9,
+    fontSize: 13,
+    fontWeight: '600',
+    color: c.ink,
+  },
+  pinMark: { fontSize: 10, fontWeight: '800', color: c.gold },
   addActions: { flexDirection: 'row', gap: 8 },
   addBtn: { flex: 1, alignItems: 'center', borderRadius: 12, paddingVertical: 10 },
   addCancel: { backgroundColor: c.card },
