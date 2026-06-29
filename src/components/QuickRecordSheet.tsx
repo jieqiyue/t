@@ -17,7 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Palette, useTheme } from '../theme';
 import { ActivityItem, ActivityLocation, ActivityTag, MoodId, NewRecordInput, WeatherId } from '../types';
 import { timeLabel } from '../dateUtils';
-import { captureLocation, locationLabel } from '../location';
+import { captureLocation, locationErrorMessage, locationLabel } from '../location';
 import { MOODS, MoodFace, PinIcon, WEATHERS, WeatherIcon } from './moodWeather';
 
 interface Props {
@@ -103,7 +103,7 @@ export default function QuickRecordSheet({ visible, items, tags, onClose, onSubm
     const r = await captureLocation();
     setLocating(false);
     if (r.ok) setLocation(r.location);
-    else setLocError(r.reason === 'denied' ? '未获得定位权限，可在系统设置里开启' : '定位失败，请重试');
+    else setLocError(locationErrorMessage(r.reason));
   };
 
   const confirmAdd = () => {

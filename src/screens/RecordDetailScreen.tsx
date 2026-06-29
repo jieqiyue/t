@@ -12,7 +12,7 @@ import {
   WeatherId,
 } from '../types';
 import { resolveActivityTag, resolveOptionalTag } from '../tagUtils';
-import { captureLocation, locationLabel } from '../location';
+import { captureLocation, locationErrorMessage, locationLabel } from '../location';
 import { MOOD_MAP, MOODS, MoodFace, PinIcon, WEATHER_MAP, WEATHERS, WeatherIcon } from '../components/moodWeather';
 import ConfirmDialog from '../components/ConfirmDialog';
 import WheelPicker from '../components/WheelPicker';
@@ -98,7 +98,7 @@ export default function RecordDetailScreen({
     const r = await captureLocation();
     setLocating(false);
     if (r.ok) setLocation(r.location);
-    else setLocError(r.reason === 'denied' ? '未获得定位权限，可在系统设置里开启' : '定位失败，请重试');
+    else setLocError(locationErrorMessage(r.reason));
   };
 
   const save = () => {
