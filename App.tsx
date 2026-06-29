@@ -181,6 +181,7 @@ export default function App() {
       note: input.note,
       mood: input.mood,
       weather: input.weather,
+      location: input.location,
       timestamp: Date.now(),
     };
     setActivities((prev) => [entry, ...prev]);

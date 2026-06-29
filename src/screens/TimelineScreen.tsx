@@ -18,9 +18,10 @@ import {
   relativeDayLabel,
   timeLabel,
 } from '../dateUtils';
-import { MOOD_MAP, MoodFace, StarIcon, WEATHER_MAP, WeatherIcon } from '../components/moodWeather';
+import { MOOD_MAP, MoodFace, PinIcon, StarIcon, WEATHER_MAP, WeatherIcon } from '../components/moodWeather';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useToday } from '../useToday';
+import { locationLabel } from '../location';
 
 interface Props {
   activities: Activity[];
@@ -173,6 +174,14 @@ export default function TimelineScreen({
                           </>
                         )}
                       </View>
+                      {!!a.location && (
+                        <View style={styles.locRow}>
+                          <PinIcon color={c.muted2} size={11} />
+                          <Text style={styles.locText} numberOfLines={1}>
+                            {locationLabel(a.location)}
+                          </Text>
+                        </View>
+                      )}
                     </View>
                   </Pressable>
                   <Pressable
@@ -338,6 +347,8 @@ const createStyles = (c: Palette) => StyleSheet.create({
   rowCat: { fontSize: 11, fontWeight: '800', letterSpacing: 0.3 },
   metaSep: { fontSize: 11, fontWeight: '700', color: c.muted3 },
   metaText: { fontSize: 11, fontWeight: '700', color: c.muted2 },
+  locRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  locText: { flex: 1, fontSize: 11, fontWeight: '600', color: c.muted2 },
   empty: { alignItems: 'center', paddingTop: 60, gap: 8 },
   emptyTitle: { fontSize: 15, fontWeight: '800', color: c.muted },
   emptyHint: { fontSize: 12.5, color: c.muted3, textAlign: 'center', lineHeight: 19 },

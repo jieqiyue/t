@@ -2,9 +2,18 @@ import React, { useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Palette, UNTAGGED_LABEL, useTheme } from '../theme';
-import { Activity, ActivityItem, ActivityTag, CategoryId, MoodId, WeatherId } from '../types';
+import {
+  Activity,
+  ActivityItem,
+  ActivityLocation,
+  ActivityTag,
+  CategoryId,
+  MoodId,
+  WeatherId,
+} from '../types';
 import { resolveActivityTag, resolveOptionalTag } from '../tagUtils';
-import { MOOD_MAP, MOODS, MoodFace, WEATHER_MAP, WEATHERS, WeatherIcon } from '../components/moodWeather';
+import { captureLocation, locationLabel } from '../location';
+import { MOOD_MAP, MOODS, MoodFace, PinIcon, WEATHER_MAP, WEATHERS, WeatherIcon } from '../components/moodWeather';
 import ConfirmDialog from '../components/ConfirmDialog';
 import WheelPicker from '../components/WheelPicker';
 import DatePickerSheet from '../components/DatePickerSheet';
@@ -48,6 +57,9 @@ export default function RecordDetailScreen({
   const [note, setNote] = useState(activity.note ?? '');
   const [mood, setMood] = useState<MoodId | null>(activity.mood ?? null);
   const [weather, setWeather] = useState<WeatherId | null>(activity.weather ?? null);
+  const [location, setLocation] = useState<ActivityLocation | null>(activity.location ?? null);
+  const [locating, setLocating] = useState(false);
+  const [locError, setLocError] = useState<string | null>(null);
   const [when, setWhen] = useState(() => new Date(activity.timestamp));
   const [selectedItemId, setSelectedItemId] = useState<string | null>(activity.itemId ?? null);
   const [selectedTagId, setSelectedTagId] = useState<ActivityTag['id'] | null>(activity.tagId ?? null);
@@ -71,10 +83,22 @@ export default function RecordDetailScreen({
     setNote(activity.note ?? '');
     setMood(activity.mood ?? null);
     setWeather(activity.weather ?? null);
+    setLocation(activity.location ?? null);
+    setLocating(false);
+    setLocError(null);
     setWhen(new Date(activity.timestamp));
     setSelectedItemId(activity.itemId ?? null);
     setSelectedTagId(activity.tagId ?? null);
     setMode('edit');
+  };
+
+  const captureLoc = async () => {
+    setLocError(null);
+    setLocating(true);
+    const r = await captureLocation();
+    setLocating(false);
+    if (r.ok) setLocation(r.location);
+    else setLocError(r.reason === 'denied' ? '未获得定位权限，可在系统设置里开启' : '定位失败，请重试');
   };
 
   const save = () => {
@@ -98,6 +122,7 @@ export default function RecordDetailScreen({
       note: note.trim() || undefined,
       mood: mood ?? undefined,
       weather: weather ?? undefined,
+      location: location ?? undefined,
       timestamp: when.getTime(),
     });
     setMode('view');
@@ -259,6 +284,29 @@ export default function RecordDetailScreen({
           </View>
 
           <View style={styles.section}>
+            <Text style={styles.label}>位置</Text>
+            {location ? (
+              <View style={styles.locChip}>
+                <PinIcon color={c.accentInk} size={14} />
+                <Text style={styles.locChipText} numberOfLines={1}>{locationLabel(location)}</Text>
+                <Pressable onPress={() => setLocation(null)} hitSlop={8} style={styles.locClear}>
+                  <Text style={styles.locClearText}>×</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable
+                onPress={captureLoc}
+                disabled={locating}
+                style={({ pressed }) => [styles.locBtn, (locating || pressed) && styles.pressed]}
+              >
+                <PinIcon color={c.muted} size={14} />
+                <Text style={styles.locBtnText}>{locating ? '定位中…' : '记录当前位置'}</Text>
+              </Pressable>
+            )}
+            {!!locError && <Text style={styles.locErr}>{locError}</Text>}
+          </View>
+
+          <View style={styles.section}>
             <Text style={styles.label}>时间</Text>
             <View style={styles.timeCard}>
               <Pressable
@@ -374,6 +422,19 @@ export default function RecordDetailScreen({
               <View style={styles.metaVal}>
                 <WeatherIcon id={activity.weather} size={18} />
                 <Text style={styles.metaValText}>{WEATHER_MAP[activity.weather].label}</Text>
+              </View>
+            ) : (
+              <Text style={styles.metaEmpty}>未记录</Text>
+            )}
+          </View>
+          <View style={[styles.metaRow, styles.metaBorder]}>
+            <Text style={styles.metaKey}>位置</Text>
+            {activity.location ? (
+              <View style={[styles.metaVal, { flex: 1 }]}>
+                <PinIcon color={c.accentInk} size={16} />
+                <Text style={[styles.metaValText, { flex: 1 }]} numberOfLines={1}>
+                  {locationLabel(activity.location)}
+                </Text>
               </View>
             ) : (
               <Text style={styles.metaEmpty}>未记录</Text>
@@ -638,6 +699,38 @@ const createStyles = (c: Palette) => StyleSheet.create({
   },
   weatherSegText: { fontSize: 12, fontWeight: '700', color: c.muted2 },
   weatherSegTextActive: { color: c.ink, fontWeight: '800' },
+  locBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: c.card,
+    borderWidth: 1.5,
+    borderColor: c.border,
+    borderRadius: 14,
+    paddingVertical: 12,
+  },
+  locBtnText: { fontSize: 13, fontWeight: '700', color: c.muted },
+  locChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    backgroundColor: c.accentSoft,
+    borderRadius: 14,
+    paddingHorizontal: 13,
+    paddingVertical: 11,
+  },
+  locChipText: { flex: 1, fontSize: 13, fontWeight: '700', color: c.accentInk },
+  locClear: {
+    width: 18,
+    height: 18,
+    borderRadius: 999,
+    backgroundColor: 'rgba(94,114,87,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  locClearText: { fontSize: 13, color: c.accentInk, marginTop: -1 },
+  locErr: { fontSize: 11.5, fontWeight: '600', color: '#B07B6F', paddingLeft: 2 },
 
   timeCard: {
     backgroundColor: c.card,

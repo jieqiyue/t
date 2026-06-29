@@ -23,6 +23,14 @@ export interface ActivityItem {
   archived?: boolean;
 }
 
+/** A captured location: always coordinates, plus a human-readable label when
+ *  reverse-geocoding succeeds (label is absent on web / when it can't resolve). */
+export interface ActivityLocation {
+  lat: number;
+  lng: number;
+  label?: string;
+}
+
 export interface Activity {
   id: string;
   itemId?: ActivityItem['id'];
@@ -33,6 +41,7 @@ export interface Activity {
   note?: string;
   mood?: MoodId;
   weather?: WeatherId;
+  location?: ActivityLocation;
   /** epoch milliseconds for when the activity happened */
   timestamp: number;
 }
@@ -45,4 +54,5 @@ export interface NewRecordInput {
   note?: string;
   mood?: MoodId;
   weather?: WeatherId;
+  location?: ActivityLocation;
 }

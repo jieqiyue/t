@@ -15,9 +15,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Palette, useTheme } from '../theme';
-import { ActivityItem, ActivityTag, MoodId, NewRecordInput, WeatherId } from '../types';
+import { ActivityItem, ActivityLocation, ActivityTag, MoodId, NewRecordInput, WeatherId } from '../types';
 import { timeLabel } from '../dateUtils';
-import { MOODS, MoodFace, WEATHERS, WeatherIcon } from './moodWeather';
+import { captureLocation, locationLabel } from '../location';
+import { MOODS, MoodFace, PinIcon, WEATHERS, WeatherIcon } from './moodWeather';
 
 interface Props {
   visible: boolean;
@@ -37,6 +38,9 @@ export default function QuickRecordSheet({ visible, items, tags, onClose, onSubm
   const [note, setNote] = useState('');
   const [mood, setMood] = useState<MoodId | null>(null);
   const [weather, setWeather] = useState<WeatherId | null>(null);
+  const [location, setLocation] = useState<ActivityLocation | null>(null);
+  const [locating, setLocating] = useState(false);
+  const [locError, setLocError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newTagId, setNewTagId] = useState<ActivityTag['id'] | null>(null);
@@ -57,6 +61,9 @@ export default function QuickRecordSheet({ visible, items, tags, onClose, onSubm
       setNote('');
       setMood(null);
       setWeather(null);
+      setLocation(null);
+      setLocating(false);
+      setLocError(null);
       setAdding(false);
       setNewTitle('');
       setNewTagId(null);
@@ -86,7 +93,17 @@ export default function QuickRecordSheet({ visible, items, tags, onClose, onSubm
       note: note.trim() || undefined,
       mood: mood ?? undefined,
       weather: weather ?? undefined,
+      location: location ?? undefined,
     });
+  };
+
+  const captureLoc = async () => {
+    setLocError(null);
+    setLocating(true);
+    const r = await captureLocation();
+    setLocating(false);
+    if (r.ok) setLocation(r.location);
+    else setLocError(r.reason === 'denied' ? '未获得定位权限，可在系统设置里开启' : '定位失败，请重试');
   };
 
   const confirmAdd = () => {
@@ -303,6 +320,30 @@ export default function QuickRecordSheet({ visible, items, tags, onClose, onSubm
                     })}
                   </View>
                 </View>
+
+                {/* Location (optional) */}
+                <View style={styles.section}>
+                  <Text style={styles.sectionLabel}>位置（可选）</Text>
+                  {location ? (
+                    <View style={styles.locChip}>
+                      <PinIcon color={c.accentInk} size={14} />
+                      <Text style={styles.locText} numberOfLines={1}>{locationLabel(location)}</Text>
+                      <Pressable onPress={() => setLocation(null)} hitSlop={8} style={styles.locClear}>
+                        <Text style={styles.locClearText}>×</Text>
+                      </Pressable>
+                    </View>
+                  ) : (
+                    <Pressable
+                      onPress={captureLoc}
+                      disabled={locating}
+                      style={[styles.locBtn, locating && styles.locBtnBusy]}
+                    >
+                      <PinIcon color={c.muted} size={14} />
+                      <Text style={styles.locBtnText}>{locating ? '定位中…' : '记录当前位置'}</Text>
+                    </Pressable>
+                  )}
+                  {!!locError && <Text style={styles.locErr}>{locError}</Text>}
+                </View>
             </ScrollView>
 
             <Pressable
@@ -436,6 +477,39 @@ const createStyles = (c: Palette) => StyleSheet.create({
   },
   weatherText: { fontSize: 12, fontWeight: '700', color: c.muted },
   weatherTextActive: { color: c.accentInk, fontWeight: '800' },
+  locBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: c.card,
+    borderWidth: 1.5,
+    borderColor: c.border,
+    borderRadius: 12,
+    paddingVertical: 11,
+  },
+  locBtnBusy: { opacity: 0.6 },
+  locBtnText: { fontSize: 12.5, fontWeight: '700', color: c.muted },
+  locChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    backgroundColor: c.accentSoft,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  locText: { flex: 1, fontSize: 12.5, fontWeight: '700', color: c.accentInk },
+  locClear: {
+    width: 18,
+    height: 18,
+    borderRadius: 999,
+    backgroundColor: 'rgba(94,114,87,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  locClearText: { fontSize: 13, color: c.accentInk, marginTop: -1 },
+  locErr: { fontSize: 11.5, fontWeight: '600', color: '#B07B6F', paddingLeft: 2 },
   empty: { backgroundColor: c.inputBg, borderRadius: 16, padding: 16, gap: 6, marginBottom: 4 },
   emptyTitle: { fontSize: 14, fontWeight: '800', color: c.ink },
   emptyHint: { fontSize: 12, color: c.muted3, lineHeight: 18 },

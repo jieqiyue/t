@@ -113,6 +113,7 @@ export function toJson(records: Activity[], tags: ActivityTag[]): string {
     mood: a.mood ?? null,
     weather: a.weather ?? null,
     note: a.note ?? null,
+    location: a.location ?? null,
     time: new Date(a.timestamp).toISOString(),
     timestamp: a.timestamp,
   }));

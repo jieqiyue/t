@@ -28,7 +28,13 @@
       }
     },
     "plugins": [
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "用于在添加记录时标注你所在的位置（仅在你点击「记录位置」时获取，数据只保存在本机）。"
+        }
+      ]
     ]
   }
 }

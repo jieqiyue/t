@@ -96,6 +96,21 @@ export function WeatherIcon({ id, color, size = 15 }: { id: WeatherId; color?: s
   );
 }
 
+/** Location pin glyph. */
+export function PinIcon({ color = '#FFFFFF', size = 15 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11z"
+        stroke={color}
+        strokeWidth={1.7}
+        strokeLinejoin="round"
+      />
+      <Circle cx={12} cy={10} r={2.4} fill={color} />
+    </Svg>
+  );
+}
+
 /** Funnel glyph for the filter entry. `filled` tints it when a filter is active. */
 export function FilterIcon({ color = '#FFFFFF', size = 15, filled = false }: { color?: string; size?: number; filled?: boolean }) {
   return (
