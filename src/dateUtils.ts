@@ -61,6 +61,22 @@ export function mondayFirstIndex(weekday: number): number {
   return (weekday + 6) % 7;
 }
 
+/**
+ * Month laid out as Monday-first weeks: leading blanks (null) before day 1 and
+ * trailing blanks to fill the last week, chunked into rows of 7.
+ */
+export function calendarWeeks(year: number, month: number): (number | null)[][] {
+  const lead = mondayFirstIndex(new Date(year, month, 1).getDay());
+  const total = daysInMonth(year, month);
+  const cells: (number | null)[] = [];
+  for (let i = 0; i < lead; i++) cells.push(null);
+  for (let d = 1; d <= total; d++) cells.push(d);
+  while (cells.length % 7 !== 0) cells.push(null);
+  const weeks: (number | null)[][] = [];
+  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
+  return weeks;
+}
+
 const ENCOURAGEMENTS = [
   '慢慢来，一切都来得及。',
   '记录此刻，便不会遗忘。',

@@ -1,19 +1,47 @@
 import React, { useMemo, useState } from 'react';
-import { DimensionValue, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  DimensionValue,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Palette, UNTAGGED_LABEL, useTheme } from '../theme';
-import { Activity, ActivityOverviewStyle, ActivityTag } from '../types';
-import { activityTagKey, resolveOptionalTag, untaggedView } from '../tagUtils';
-import { SearchIcon } from '../components/moodWeather';
+import { heatColor, heatLegend, hexToRgb, Palette, UNTAGGED_LABEL, useTheme } from '../theme';
+import { Activity, ActivityTag } from '../types';
+import { activityTagKey, resolveActivityTag, resolveOptionalTag, untaggedView } from '../tagUtils';
+import { calendarWeeks, cnMonth, timeLabel } from '../dateUtils';
+import { FilterIcon, SearchIcon } from '../components/moodWeather';
+
+type Tab = 'calendar' | 'rank' | 'cloud';
+
+// Calendar filter: all records, one tag, or one specific event (by title).
+export type ActivityFilter =
+  | { type: 'all' }
+  | { type: 'tag'; tagId: ActivityTag['id'] }
+  | { type: 'event'; title: string };
 
 interface Props {
   activities: Activity[];
   tags: ActivityTag[];
-  overviewStyle: ActivityOverviewStyle;
+  // View state is owned by the parent so it survives navigating to a record's
+  // detail and back (e.g. the open day stays open on return).
+  tab: Tab;
+  onChangeTab: (tab: Tab) => void;
+  view: { y: number; m: number };
+  onChangeView: (view: { y: number; m: number }) => void;
+  selectedDay: number | null;
+  onSelectDay: (day: number | null) => void;
+  filter: ActivityFilter;
+  onChangeFilter: (filter: ActivityFilter) => void;
   onBack: () => void;
   onOpenSettings: () => void;
   onOpenStats: (title: string) => void;
   onOpenSearch: () => void;
+  onOpenDetail: (id: string) => void;
 }
 
 interface ActivitySummary {
@@ -23,43 +51,36 @@ interface ActivitySummary {
   latest: number;
 }
 
-type TagFilter = 'all' | 'untagged' | ActivityTag['id'];
-type CloudMode = 'frequency' | 'category';
+const WEEK = ['一', '二', '三', '四', '五', '六', '日'];
+const WEEKDAY = ['日', '一', '二', '三', '四', '五', '六'];
 
 export default function AllActivitiesScreen({
   activities,
   tags,
-  overviewStyle,
+  tab,
+  onChangeTab,
+  view,
+  onChangeView,
+  selectedDay,
+  onSelectDay,
+  filter,
+  onChangeFilter,
   onBack,
   onOpenSettings,
   onOpenStats,
   onOpenSearch,
+  onOpenDetail,
 }: Props) {
   const insets = useSafeAreaInsets();
   const c = useTheme();
   const styles = useThemedStyles();
-  const [filter, setFilter] = useState<TagFilter>('all');
-  const [cloudMode, setCloudMode] = useState<CloudMode>('frequency');
+  const [filterSheet, setFilterSheet] = useState(false);
+  const [filterQuery, setFilterQuery] = useState('');
 
   const summaries = useMemo(() => buildSummaries(activities), [activities]);
-  // A record counts as "untagged" for display if it has no tag OR its tag id no
-  // longer exists (orphaned after a tag was deleted / restored). This keeps such
-  // records visible everywhere instead of silently dropping out of category views.
-  const tagIds = useMemo(() => new Set(tags.map((t) => t.id)), [tags]);
-  const filtered = useMemo(
-    () =>
-      summaries.filter((item) => {
-        if (filter === 'all') return true;
-        if (filter === 'untagged') return !item.tagId || !tagIds.has(item.tagId);
-        return item.tagId === filter;
-      }),
-    [filter, summaries, tagIds],
-  );
   const total = useMemo(() => summaries.reduce((sum, item) => sum + item.count, 0), [summaries]);
-  const hasUntagged = useMemo(
-    () => summaries.some((item) => !item.tagId || !tagIds.has(item.tagId)),
-    [summaries, tagIds],
-  );
+  const maxCount = useMemo(() => Math.max(1, ...summaries.map((item) => item.count)), [summaries]);
+  const tagIds = useMemo(() => new Set(tags.map((t) => t.id)), [tags]);
   const categoryTotals = useMemo(() => {
     const totals: Record<string, number> = {};
     summaries.forEach((item) => {
@@ -68,7 +89,104 @@ export default function AllActivitiesScreen({
     });
     return totals;
   }, [summaries, tagIds]);
-  const maxCount = useMemo(() => Math.max(1, ...filtered.map((item) => item.count)), [filtered]);
+
+  // The calendar (heatmap + day sheet) reflects the active filter.
+  const calendarActs = useMemo(() => {
+    if (filter.type === 'all') return activities;
+    if (filter.type === 'tag') return activities.filter((a) => activityTagKey(a) === filter.tagId);
+    return activities.filter((a) => a.title === filter.title);
+  }, [activities, filter]);
+
+  // Per-day counts for the displayed month (calendar heatmap).
+  const monthCounts = useMemo(() => {
+    const map: Record<number, number> = {};
+    for (const a of calendarActs) {
+      const d = new Date(a.timestamp);
+      if (d.getFullYear() === view.y && d.getMonth() === view.m) {
+        map[d.getDate()] = (map[d.getDate()] || 0) + 1;
+      }
+    }
+    return map;
+  }, [calendarActs, view]);
+  const monthTotal = useMemo(
+    () => Object.values(monthCounts).reduce((s, n) => s + n, 0),
+    [monthCounts],
+  );
+  const monthActiveDays = useMemo(() => Object.keys(monthCounts).length, [monthCounts]);
+  const weeks = useMemo(() => calendarWeeks(view.y, view.m), [view]);
+
+  const dayRecords = useMemo(() => {
+    if (selectedDay == null) return [];
+    return calendarActs
+      .filter((a) => {
+        const d = new Date(a.timestamp);
+        return d.getFullYear() === view.y && d.getMonth() === view.m && d.getDate() === selectedDay;
+      })
+      .sort((a, b) => a.timestamp - b.timestamp);
+  }, [calendarActs, view, selectedDay]);
+
+  // Filter display: name, the tag it resolves to (drives heatmap colour), and a
+  // "含 …" hint listing the events under a tag filter.
+  const filterTag = useMemo(() => {
+    if (filter.type === 'tag') return tags.find((t) => t.id === filter.tagId) ?? null;
+    if (filter.type === 'event') {
+      const sample = activities.find((a) => a.title === filter.title);
+      const key = sample ? activityTagKey(sample) : undefined;
+      return key ? tags.find((t) => t.id === key) ?? null : null;
+    }
+    return null;
+  }, [filter, tags, activities]);
+  const filterRgb = filter.type !== 'all' && filterTag ? hexToRgb(filterTag.dot) : c.heatRGB;
+  const filterName =
+    filter.type === 'tag' ? filterTag?.label ?? UNTAGGED_LABEL : filter.type === 'event' ? filter.title : '';
+  const tagEventHint = useMemo(() => {
+    if (filter.type !== 'tag') return '';
+    const titles = [...new Set(activities.filter((a) => activityTagKey(a) === filter.tagId).map((a) => a.title))];
+    if (titles.length === 0) return '';
+    return `含 ${titles.slice(0, 3).join(' · ')}${titles.length > 3 ? ' 等' : ''}`;
+  }, [filter, activities]);
+  const filterHint = filter.type === 'event' ? filterTag?.label ?? '' : tagEventHint;
+
+  const changeMonth = (delta: number) => {
+    let m = view.m + delta;
+    let y = view.y;
+    if (m < 0) {
+      m = 11;
+      y -= 1;
+    } else if (m > 11) {
+      m = 0;
+      y += 1;
+    }
+    onChangeView({ y, m });
+    onSelectDay(null);
+  };
+
+  const subtitleFiltered = tab === 'calendar' && filter.type !== 'all';
+  const subtitle =
+    tab === 'calendar'
+      ? subtitleFiltered
+        ? `已筛选「${filterName}」· ${monthTotal} 次 · ${monthActiveDays} 天`
+        : `本月 ${monthTotal} 次 · ${monthActiveDays} 天有记录`
+      : tab === 'rank'
+      ? `${summaries.length} 项 · 累计 ${total} 次`
+      : '圆点越大，做得越多';
+
+  const eventOptions = useMemo(() => {
+    const q = filterQuery.trim().toLowerCase();
+    return summaries.filter((s) => !q || s.title.toLowerCase().includes(q));
+  }, [summaries, filterQuery]);
+
+  const applyFilter = (f: ActivityFilter) => {
+    onChangeFilter(f);
+    onSelectDay(null);
+    setFilterSheet(false);
+  };
+
+  const TABS: { id: Tab; label: string }[] = [
+    { id: 'calendar', label: '日历' },
+    { id: 'rank', label: '频次榜' },
+    { id: 'cloud', label: '活动云' },
+  ];
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
@@ -82,14 +200,16 @@ export default function AllActivitiesScreen({
           </Pressable>
           <View style={styles.titleBlock}>
             <Text style={styles.title}>全部活动</Text>
-            <Text style={styles.subtitle}>
-              {summaries.length} 项 · 累计 {total} 次
+            <Text
+              style={[styles.subtitle, subtitleFiltered && { color: filterTag?.text ?? c.accentInk }]}
+            >
+              {subtitle}
             </Text>
           </View>
-          <Pressable onPress={onOpenSearch} style={styles.settingsButton} hitSlop={10}>
+          <Pressable onPress={onOpenSearch} style={styles.iconBtn} hitSlop={10}>
             <SearchIcon color={c.muted} size={17} />
           </Pressable>
-          <Pressable onPress={onOpenSettings} style={styles.settingsButton} hitSlop={10}>
+          <Pressable onPress={onOpenSettings} style={styles.iconBtn} hitSlop={10}>
             <View style={styles.moreDots}>
               <View style={styles.moreDot} />
               <View style={styles.moreDot} />
@@ -98,45 +218,297 @@ export default function AllActivitiesScreen({
           </Pressable>
         </View>
 
-        {overviewStyle === 'rank' ? (
-          <>
-            <CategoryFilters tags={tags} hasUntagged={hasUntagged} value={filter} onChange={setFilter} />
-            <RankOverview items={filtered} tags={tags} maxCount={maxCount} onOpenStats={onOpenStats} />
-          </>
-        ) : (
-          <>
-            <View style={styles.segmented}>
+        <View style={styles.tabs}>
+          {TABS.map((t) => {
+            const active = tab === t.id;
+            return (
               <Pressable
-                onPress={() => setCloudMode('frequency')}
-                style={cloudMode === 'frequency' ? styles.segmentActive : styles.segment}
+                key={t.id}
+                onPress={() => onChangeTab(t.id)}
+                style={[styles.tab, active && styles.tabActive]}
               >
-                <Text style={cloudMode === 'frequency' ? styles.segmentActiveText : styles.segmentText}>
-                  按频次
-                </Text>
+                <Text style={[styles.tabText, active && styles.tabTextActive]}>{t.label}</Text>
               </Pressable>
+            );
+          })}
+        </View>
+
+        {tab === 'calendar' ? (
+          <>
+            <View style={styles.filterRow}>
               <Pressable
-                onPress={() => setCloudMode('category')}
-                style={cloudMode === 'category' ? styles.segmentActive : styles.segment}
+                onPress={() => {
+                  setFilterQuery('');
+                  setFilterSheet(true);
+                }}
+                style={[styles.filterBtn, filter.type !== 'all' && filterTag && { backgroundColor: filterTag.soft }]}
+                hitSlop={6}
               >
-                <Text style={cloudMode === 'category' ? styles.segmentActiveText : styles.segmentText}>
-                  按分类
-                </Text>
+                <FilterIcon
+                  color={filter.type !== 'all' && filterTag ? filterTag.dot : c.muted}
+                  size={15}
+                  filled={filter.type !== 'all'}
+                />
+              </Pressable>
+              {filter.type === 'all' ? (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.filterChips}
+                >
+                  <Pressable
+                    onPress={() => onChangeFilter({ type: 'all' })}
+                    style={[styles.fChip, styles.fChipActive]}
+                  >
+                    <Text style={styles.fChipActiveText}>全部</Text>
+                  </Pressable>
+                  {tags.map((tag) => (
+                    <Pressable
+                      key={tag.id}
+                      onPress={() => onChangeFilter({ type: 'tag', tagId: tag.id })}
+                      style={styles.fChip}
+                    >
+                      <Text style={styles.fChipText}>{tag.label}</Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              ) : (
+                <View style={styles.activeFilter}>
+                  <Pressable
+                    onPress={() => onChangeFilter({ type: 'all' })}
+                    style={[styles.activePill, filterTag && { backgroundColor: filterTag.dot }]}
+                  >
+                    <Text style={styles.activePillText} numberOfLines={1}>
+                      {filterName}
+                    </Text>
+                    <View style={styles.activePillX}>
+                      <Text style={styles.activePillXText}>×</Text>
+                    </View>
+                  </Pressable>
+                  {!!filterHint && (
+                    <Text style={styles.filterHint} numberOfLines={1}>
+                      {filterHint}
+                    </Text>
+                  )}
+                </View>
+              )}
+            </View>
+
+            <View style={styles.monthRow}>
+              <Pressable onPress={() => changeMonth(-1)} hitSlop={12}>
+                <Text style={styles.monthArrow}>‹</Text>
+              </Pressable>
+              <Text style={styles.monthLabel}>
+                {view.y}年{cnMonth(view.m)}
+              </Text>
+              <Pressable onPress={() => changeMonth(1)} hitSlop={12}>
+                <Text style={styles.monthArrow}>›</Text>
               </Pressable>
             </View>
-            {cloudMode === 'frequency' ? (
-              <CloudOverview items={filtered} tags={tags} maxCount={maxCount} onOpenStats={onOpenStats} />
-            ) : (
-              <CloudByCategoryOverview
-                items={filtered}
-                tags={tags}
-                maxCount={maxCount}
-                onOpenStats={onOpenStats}
-              />
-            )}
+
+            <View style={styles.weekHeader}>
+              {WEEK.map((w, i) => (
+                <Text key={w} style={[styles.weekCell, i >= 5 && { color: c.weekend }]}>
+                  {w}
+                </Text>
+              ))}
+            </View>
+
+            <View style={styles.grid}>
+              {weeks.map((week, wi) => (
+                <View key={wi} style={styles.weekRow}>
+                  {week.map((day, di) => {
+                    if (day == null) return <View key={di} style={styles.cellSpacer} />;
+                    const count = monthCounts[day] || 0;
+                    const dark = count >= 3;
+                    return (
+                      <Pressable
+                        key={di}
+                        disabled={count === 0}
+                        onPress={() => onSelectDay(day)}
+                        style={({ pressed }) => [
+                          styles.cell,
+                          { backgroundColor: heatColor(c, count, filterRgb) },
+                          pressed && styles.pressed,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.cellDay,
+                            { color: count === 0 ? c.muted3 : dark ? c.heatDayStrong : c.heatDaySoft },
+                          ]}
+                        >
+                          {day}
+                        </Text>
+                        {count > 0 && (
+                          <Text
+                            style={[
+                              styles.cellCount,
+                              { color: dark ? c.heatCountStrong : c.heatCountSoft },
+                            ]}
+                          >
+                            {count}
+                          </Text>
+                        )}
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ))}
+            </View>
+
+            <View style={styles.legend}>
+              <Text style={styles.legendText}>少</Text>
+              {heatLegend(c, filterRgb).map((sw, i) => (
+                <View key={i} style={[styles.legendSwatch, { backgroundColor: sw }]} />
+              ))}
+              <Text style={styles.legendText}>多</Text>
+            </View>
+
+            <View style={styles.hint}>
+              <Text style={styles.hintChevron}>›</Text>
+              <Text style={styles.hintText}>点击某天，查看当日全部记录</Text>
+            </View>
+          </>
+        ) : tab === 'rank' ? (
+          <RankOverview items={summaries} tags={tags} maxCount={maxCount} onOpenStats={onOpenStats} />
+        ) : (
+          <>
+            <CloudOverview items={summaries} tags={tags} maxCount={maxCount} onOpenStats={onOpenStats} />
             <CategoryTotals tags={tags} totals={categoryTotals} />
           </>
         )}
       </ScrollView>
+
+      <Modal
+        visible={selectedDay != null}
+        transparent
+        animationType="slide"
+        onRequestClose={() => onSelectDay(null)}
+      >
+        <View style={styles.sheetFill}>
+          <Pressable style={styles.sheetScrim} onPress={() => onSelectDay(null)} />
+          <View style={[styles.daySheet, { paddingBottom: insets.bottom + 18 }]}>
+            <View style={styles.grabber} />
+            {selectedDay != null && (
+              <>
+                <View style={styles.dayHead}>
+                  <View style={styles.dayHeadText}>
+                    <Text style={styles.dayTitle}>
+                      {view.m + 1}月{selectedDay}日
+                    </Text>
+                    <Text style={styles.daySub}>
+                      星期{WEEKDAY[new Date(view.y, view.m, selectedDay).getDay()]} · {dayRecords.length} 件记录
+                    </Text>
+                  </View>
+                  {dayRecords.length >= 5 && (
+                    <View style={styles.busyPill}>
+                      <View style={styles.busyDot} />
+                      <Text style={styles.busyText}>较忙的一天</Text>
+                    </View>
+                  )}
+                </View>
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.dayList}>
+                  {dayRecords.map((a) => {
+                    const tg = resolveActivityTag(c, tags, a);
+                    return (
+                      <Pressable
+                        key={a.id}
+                        onPress={() => onOpenDetail(a.id)}
+                        style={({ pressed }) => [styles.dayRow, pressed && styles.pressed]}
+                      >
+                        <Text style={styles.dayTime} numberOfLines={1}>{timeLabel(a.timestamp)}</Text>
+                        <View style={[styles.dayDot, { backgroundColor: tg.dot }]} />
+                        <Text style={styles.dayRowTitle} numberOfLines={1}>
+                          {a.title}
+                        </Text>
+                        <Text style={[styles.dayRowTag, { color: tg.text }]}>{tg.label}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={filterSheet}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setFilterSheet(false)}
+      >
+        <View style={styles.sheetFill}>
+          <Pressable style={styles.sheetScrim} onPress={() => setFilterSheet(false)} />
+          <View style={[styles.filterSheet, { paddingBottom: insets.bottom + 18 }]}>
+            <View style={styles.grabber} />
+            <Text style={styles.filterSheetTitle}>筛选</Text>
+
+            <Text style={styles.filterSheetSection}>按标签</Text>
+            <View style={styles.filterSheetTags}>
+              <Pressable
+                onPress={() => applyFilter({ type: 'all' })}
+                style={[styles.fChip, filter.type === 'all' && styles.fChipActive]}
+              >
+                <Text style={filter.type === 'all' ? styles.fChipActiveText : styles.fChipText}>全部</Text>
+              </Pressable>
+              {tags.map((tag) => {
+                const active = filter.type === 'tag' && filter.tagId === tag.id;
+                return (
+                  <Pressable
+                    key={tag.id}
+                    onPress={() => applyFilter({ type: 'tag', tagId: tag.id })}
+                    style={[styles.fChip, active && { backgroundColor: tag.dot, borderColor: tag.dot }]}
+                  >
+                    {!active && <View style={[styles.fChipDot, { backgroundColor: tag.dot }]} />}
+                    <Text style={active ? styles.fChipActiveText : styles.fChipText}>{tag.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <Text style={styles.filterSheetSection}>按事件</Text>
+            <TextInput
+              style={styles.filterSearch}
+              value={filterQuery}
+              onChangeText={setFilterQuery}
+              placeholder="搜索事件"
+              placeholderTextColor={c.muted3}
+            />
+            <ScrollView
+              style={styles.filterEventList}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              {eventOptions.length === 0 ? (
+                <Text style={styles.filterEmpty}>没有匹配的事件</Text>
+              ) : (
+                eventOptions.map((s) => {
+                  const active = filter.type === 'event' && filter.title === s.title;
+                  const tg = resolveOptionalTag(c, tags, s.tagId);
+                  return (
+                    <Pressable
+                      key={s.title}
+                      onPress={() => applyFilter({ type: 'event', title: s.title })}
+                      style={({ pressed }) => [styles.filterEventRow, pressed && styles.pressed]}
+                    >
+                      <View style={[styles.fChipDot, { backgroundColor: tg.dot }]} />
+                      <Text
+                        style={[styles.filterEventTitle, active && { color: c.accentInk }]}
+                        numberOfLines={1}
+                      >
+                        {s.title}
+                      </Text>
+                      <Text style={styles.filterEventCount}>{s.count} 次</Text>
+                    </Pressable>
+                  );
+                })
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -164,48 +536,6 @@ function buildSummaries(activities: Activity[]): ActivitySummary[] {
   }
 
   return [...map.values()].sort((a, b) => b.count - a.count || b.latest - a.latest);
-}
-
-function CategoryFilters({
-  tags,
-  hasUntagged,
-  value,
-  onChange,
-}: {
-  tags: ActivityTag[];
-  hasUntagged: boolean;
-  value: TagFilter;
-  onChange: (value: TagFilter) => void;
-}) {
-  const styles = useThemedStyles();
-  const filters: { id: TagFilter; label: string }[] = [
-    { id: 'all', label: '全部' },
-    ...(hasUntagged ? [{ id: 'untagged' as const, label: UNTAGGED_LABEL }] : []),
-    ...tags.map((tag) => ({ id: tag.id, label: tag.label })),
-  ];
-
-  return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.filters}
-    >
-      {filters.map((filter) => {
-        const active = value === filter.id;
-        return (
-          <Pressable
-            key={filter.id}
-            onPress={() => onChange(filter.id)}
-            style={[styles.filterChip, active && styles.filterChipActive]}
-          >
-            <Text style={[styles.filterText, active && styles.filterTextActive]}>
-              {filter.label}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </ScrollView>
-  );
 }
 
 function RankOverview({
@@ -321,63 +651,6 @@ function CloudOverview({
   );
 }
 
-function CloudByCategoryOverview({
-  items,
-  tags,
-  maxCount,
-  onOpenStats,
-}: {
-  items: ActivitySummary[];
-  tags: ActivityTag[];
-  maxCount: number;
-  onOpenStats: (title: string) => void;
-}) {
-  const c = useTheme();
-  const styles = useThemedStyles();
-  if (items.length === 0) return <EmptyState />;
-
-  const tagIds = new Set(tags.map((t) => t.id));
-  const taggedGroups = tags
-    .map((tag) => ({
-      key: tag.id,
-      tag,
-      items: items.filter((item) => item.tagId === tag.id),
-    }))
-    .filter((group) => group.items.length > 0);
-  // Untagged OR orphaned (tag deleted) — both fall into the neutral bucket so
-  // nothing disappears and the per-group totals add up to the overall total.
-  const untaggedItems = items.filter((item) => !item.tagId || !tagIds.has(item.tagId));
-  const groups = [
-    ...taggedGroups,
-    ...(untaggedItems.length > 0 ? [{ key: '__untagged', tag: untaggedView(c), items: untaggedItems }] : []),
-  ];
-
-  return (
-    <View style={styles.categoryCloud}>
-      {groups.map((group) => {
-        const total = group.items.reduce((sum, item) => sum + item.count, 0);
-        return (
-          <View key={group.key} style={styles.categoryGroup}>
-            <View style={styles.categoryHead}>
-              <View style={styles.categoryName}>
-                <View style={[styles.smallDot, { backgroundColor: group.tag.dot }]} />
-                <Text style={styles.categoryTitle}>{group.tag.label}</Text>
-              </View>
-              <Text style={[styles.categoryCount, { color: group.tag.text }]}>{total} 次</Text>
-            </View>
-            <CloudOverview
-              items={group.items}
-              tags={tags}
-              maxCount={maxCount}
-              onOpenStats={onOpenStats}
-            />
-          </View>
-        );
-      })}
-    </View>
-  );
-}
-
 function CategoryTotals({ tags, totals }: { tags: ActivityTag[]; totals: Record<string, number> }) {
   const c = useTheme();
   const styles = useThemedStyles();
@@ -387,15 +660,13 @@ function CategoryTotals({ tags, totals }: { tags: ActivityTag[]; totals: Record<
     <View style={styles.totalCard}>
       <Text style={styles.totalTitle}>各分类累计</Text>
       <View style={styles.totalGrid}>
-        {tags.map((category) => {
-          return (
-            <View key={category.id} style={styles.totalItem}>
-              <View style={[styles.smallDot, { backgroundColor: category.dot }]} />
-              <Text style={styles.totalLabel}>{category.label}</Text>
-              <Text style={[styles.totalNum, { color: category.text }]}>{totals[category.id] || 0}</Text>
-            </View>
-          );
-        })}
+        {tags.map((category) => (
+          <View key={category.id} style={styles.totalItem}>
+            <View style={[styles.smallDot, { backgroundColor: category.dot }]} />
+            <Text style={styles.totalLabel}>{category.label}</Text>
+            <Text style={[styles.totalNum, { color: category.text }]}>{totals[category.id] || 0}</Text>
+          </View>
+        ))}
         {showUntagged && (
           <View key="untagged" style={styles.totalItem}>
             <View style={[styles.smallDot, { backgroundColor: untagged.dot }]} />
@@ -423,151 +694,294 @@ function useThemedStyles() {
   return useMemo(() => createStyles(c), [c]);
 }
 
-const createStyles = (c: Palette) => StyleSheet.create({
-  root: { flex: 1, backgroundColor: c.bgAlt },
-  scroll: { paddingHorizontal: 20, paddingTop: 8 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  roundButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 999,
-    backgroundColor: c.card,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: c.ink,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  backIcon: { fontSize: 20, color: c.muted, marginTop: -2 },
-  titleBlock: { flex: 1, gap: 2 },
-  title: { fontSize: 22, fontWeight: '800', color: c.ink, lineHeight: 25 },
-  subtitle: { fontSize: 11.5, fontWeight: '600', color: c.muted3 },
-  settingsButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 999,
-    backgroundColor: c.card,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  moreDots: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  moreDot: { width: 3.5, height: 3.5, borderRadius: 2, backgroundColor: c.muted },
-  filters: { gap: 7, paddingTop: 13, paddingBottom: 1 },
-  filterChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 999,
-    backgroundColor: c.card,
-    borderWidth: 1,
-    borderColor: c.border,
-  },
-  filterChipActive: { backgroundColor: c.ink, borderColor: c.ink },
-  filterText: { fontSize: 12, fontWeight: '700', color: c.muted },
-  filterTextActive: { color: '#FFFFFF', fontWeight: '800' },
-  rankCard: {
-    marginTop: 12,
-    borderRadius: 18,
-    backgroundColor: c.card,
-    paddingHorizontal: 15,
-    paddingVertical: 4,
-    shadowColor: c.ink,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 2,
-  },
-  rankItem: {
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: c.inputBg,
-    gap: 8,
-  },
-  rankItemLast: { borderBottomWidth: 0 },
-  rankTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-  rankName: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  smallDot: { width: 8, height: 8, borderRadius: 999 },
-  rankTitle: { flex: 1, fontSize: 14, fontWeight: '700', color: c.ink },
-  rankCount: { fontSize: 13, fontWeight: '800', color: c.ink },
-  rankUnit: { fontSize: 10, fontWeight: '600', color: c.gold },
-  progressTrack: { height: 7, borderRadius: 4, backgroundColor: c.border, overflow: 'hidden' },
-  progressFill: { height: '100%', borderRadius: 4 },
-  segmented: {
-    flexDirection: 'row',
-    backgroundColor: c.border,
-    borderRadius: 12,
-    padding: 3,
-    gap: 2,
-    marginTop: 14,
-  },
-  segmentActive: {
-    flex: 1,
-    alignItems: 'center',
-    borderRadius: 9,
-    backgroundColor: c.card,
-    paddingVertical: 8,
-    shadowColor: c.ink,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-  },
-  segment: { flex: 1, alignItems: 'center', borderRadius: 9, paddingVertical: 8 },
-  segmentActiveText: { fontSize: 12, fontWeight: '800', color: c.ink },
-  segmentText: { fontSize: 12, fontWeight: '700', color: c.muted2 },
-  cloud: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    alignContent: 'flex-start',
-    gap: 9,
-    marginTop: 14,
-  },
-  categoryCloud: { marginTop: 14, gap: 14 },
-  categoryGroup: {
-    borderRadius: 16,
-    backgroundColor: c.card,
-    paddingHorizontal: 14,
-    paddingTop: 12,
-    paddingBottom: 14,
-    shadowColor: c.ink,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    elevation: 1,
-  },
-  categoryHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  categoryName: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  categoryTitle: { fontSize: 13, fontWeight: '800', color: c.ink },
-  categoryCount: { fontSize: 12, fontWeight: '800' },
-  cloudPill: { flexDirection: 'row', alignItems: 'baseline', gap: 5 },
-  cloudText: { fontWeight: '800' },
-  cloudCount: { fontWeight: '700', opacity: 0.75 },
-  totalCard: {
-    marginTop: 18,
-    borderRadius: 16,
-    backgroundColor: c.card,
-    paddingHorizontal: 15,
-    paddingVertical: 13,
-    gap: 10,
-    shadowColor: c.ink,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 2,
-  },
-  totalTitle: {
-    fontSize: 10.5,
-    fontWeight: '800',
-    letterSpacing: 1.2,
-    color: c.gold,
-  },
-  totalGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 10 },
-  totalItem: { width: '50%', flexDirection: 'row', alignItems: 'center', gap: 6 },
-  totalLabel: { fontSize: 12, fontWeight: '700', color: c.ink },
-  totalNum: { fontSize: 12, fontWeight: '800' },
-  empty: { alignItems: 'center', paddingTop: 72, gap: 8 },
-  emptyTitle: { fontSize: 15, fontWeight: '800', color: c.muted },
-  emptyHint: { fontSize: 12.5, color: c.muted3, textAlign: 'center', lineHeight: 19 },
-  pressed: { opacity: 0.58 },
-});
+const createStyles = (c: Palette) =>
+  StyleSheet.create({
+    root: { flex: 1, backgroundColor: c.bgAlt },
+    scroll: { paddingHorizontal: 20, paddingTop: 8 },
+    header: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    roundButton: {
+      width: 34,
+      height: 34,
+      borderRadius: 999,
+      backgroundColor: c.card,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: c.ink,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.08,
+      shadowRadius: 6,
+      elevation: 2,
+    },
+    backIcon: { fontSize: 20, color: c.muted, marginTop: -2 },
+    titleBlock: { flex: 1, gap: 2 },
+    title: { fontSize: 22, fontWeight: '800', color: c.ink, lineHeight: 25 },
+    subtitle: { fontSize: 11.5, fontWeight: '600', color: c.muted3 },
+    iconBtn: {
+      width: 34,
+      height: 34,
+      borderRadius: 999,
+      backgroundColor: c.card,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    moreDots: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+    moreDot: { width: 3.5, height: 3.5, borderRadius: 2, backgroundColor: c.muted },
+
+    tabs: { flexDirection: 'row', backgroundColor: c.border, borderRadius: 12, padding: 3, gap: 2, marginTop: 16 },
+    tab: { flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 9 },
+    tabActive: {
+      backgroundColor: c.card,
+      shadowColor: c.ink,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    tabText: { fontSize: 12.5, fontWeight: '700', color: c.muted2 },
+    tabTextActive: { color: c.ink, fontWeight: '800' },
+
+    // filter row
+    filterRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 12 },
+    filterBtn: {
+      width: 30,
+      height: 30,
+      borderRadius: 9,
+      backgroundColor: c.card,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: c.ink,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.06,
+      shadowRadius: 6,
+      elevation: 1,
+    },
+    filterChips: { gap: 6, alignItems: 'center', paddingRight: 8 },
+    fChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      paddingHorizontal: 11,
+      paddingVertical: 6,
+      borderRadius: 999,
+      backgroundColor: c.card,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    fChipActive: { backgroundColor: c.ink, borderColor: c.ink },
+    fChipText: { fontSize: 11.5, fontWeight: '700', color: c.muted },
+    fChipActiveText: { fontSize: 11.5, fontWeight: '800', color: '#FFFFFF' },
+    fChipDot: { width: 6, height: 6, borderRadius: 999 },
+    activeFilter: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, minWidth: 0 },
+    activePill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingLeft: 12,
+      paddingRight: 8,
+      paddingVertical: 6,
+      borderRadius: 999,
+      backgroundColor: c.accent,
+      maxWidth: '70%',
+    },
+    activePillText: { fontSize: 11.5, fontWeight: '800', color: '#FFFFFF', flexShrink: 1 },
+    activePillX: {
+      width: 15,
+      height: 15,
+      borderRadius: 999,
+      backgroundColor: 'rgba(255,255,255,0.3)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    activePillXText: { fontSize: 10, color: '#FFFFFF', lineHeight: 12, marginTop: -1 },
+    filterHint: { flexShrink: 1, fontSize: 11, fontWeight: '700', color: c.muted3 },
+
+    // filter sheet
+    filterSheet: {
+      backgroundColor: c.sheet,
+      borderTopLeftRadius: 28,
+      borderTopRightRadius: 28,
+      paddingHorizontal: 20,
+      paddingTop: 13,
+      gap: 10,
+      maxHeight: '82%',
+      shadowColor: c.ink,
+      shadowOffset: { width: 0, height: -3 },
+      shadowOpacity: 0.06,
+      shadowRadius: 14,
+      elevation: 8,
+    },
+    filterSheetTitle: { fontSize: 16, fontWeight: '800', color: c.ink },
+    filterSheetSection: { fontSize: 10.5, fontWeight: '800', letterSpacing: 1, color: c.gold, marginTop: 4 },
+    filterSheetTags: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
+    filterSearch: {
+      backgroundColor: c.inputBg,
+      borderRadius: 13,
+      paddingHorizontal: 13,
+      paddingVertical: 10,
+      color: c.ink,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    filterEventList: { maxHeight: 260 },
+    filterEmpty: { fontSize: 12.5, fontWeight: '700', color: c.muted3, textAlign: 'center', paddingVertical: 18 },
+    filterEventRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      paddingVertical: 11,
+      borderBottomWidth: 1,
+      borderBottomColor: c.inputBg,
+    },
+    filterEventTitle: { flex: 1, fontSize: 13.5, fontWeight: '700', color: c.ink },
+    filterEventCount: { fontSize: 11, fontWeight: '700', color: c.gold },
+
+    // calendar
+    monthRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 20, marginTop: 18 },
+    monthArrow: { fontSize: 18, color: c.gold, fontWeight: '700', paddingHorizontal: 4 },
+    monthLabel: { fontSize: 15, fontWeight: '800', color: c.ink },
+    weekHeader: { flexDirection: 'row', marginTop: 14 },
+    weekCell: { flex: 1, textAlign: 'center', fontSize: 10, fontWeight: '700', color: c.gold },
+    grid: { marginTop: 8, gap: 5 },
+    weekRow: { flexDirection: 'row', gap: 5 },
+    cell: {
+      flex: 1,
+      aspectRatio: 1,
+      borderRadius: 9,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 2,
+    },
+    cellSpacer: { flex: 1, aspectRatio: 1 },
+    cellDay: { fontSize: 11, fontWeight: '700', lineHeight: 12 },
+    cellCount: { fontSize: 9, fontWeight: '800', lineHeight: 10 },
+    legend: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 5, marginTop: 14 },
+    legendText: { fontSize: 10, color: c.gold, fontWeight: '600' },
+    legendSwatch: { width: 13, height: 13, borderRadius: 4 },
+    hint: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      backgroundColor: c.inputBg,
+      borderRadius: 11,
+      paddingVertical: 11,
+      marginTop: 14,
+    },
+    hintChevron: { fontSize: 14, fontWeight: '800', color: c.gold },
+    hintText: { fontSize: 11.5, fontWeight: '700', color: c.muted2 },
+
+    // rank
+    rankCard: {
+      marginTop: 14,
+      borderRadius: 18,
+      backgroundColor: c.card,
+      paddingHorizontal: 15,
+      paddingVertical: 4,
+      shadowColor: c.ink,
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.05,
+      shadowRadius: 12,
+      elevation: 2,
+    },
+    rankItem: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: c.inputBg, gap: 8 },
+    rankItemLast: { borderBottomWidth: 0 },
+    rankTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+    rankName: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 8 },
+    smallDot: { width: 8, height: 8, borderRadius: 999 },
+    rankTitle: { flex: 1, fontSize: 14, fontWeight: '700', color: c.ink },
+    rankCount: { fontSize: 13, fontWeight: '800', color: c.ink },
+    rankUnit: { fontSize: 10, fontWeight: '600', color: c.gold },
+    progressTrack: { height: 7, borderRadius: 4, backgroundColor: c.border, overflow: 'hidden' },
+    progressFill: { height: '100%', borderRadius: 4 },
+
+    // cloud
+    cloud: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      alignItems: 'center',
+      alignContent: 'flex-start',
+      gap: 9,
+      marginTop: 16,
+    },
+    cloudPill: { flexDirection: 'row', alignItems: 'baseline', gap: 5 },
+    cloudText: { fontWeight: '800' },
+    cloudCount: { fontWeight: '700', opacity: 0.75 },
+    totalCard: {
+      marginTop: 18,
+      borderRadius: 16,
+      backgroundColor: c.card,
+      paddingHorizontal: 15,
+      paddingVertical: 13,
+      gap: 10,
+      shadowColor: c.ink,
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.05,
+      shadowRadius: 12,
+      elevation: 2,
+    },
+    totalTitle: { fontSize: 10.5, fontWeight: '800', letterSpacing: 1.2, color: c.gold },
+    totalGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 10 },
+    totalItem: { width: '50%', flexDirection: 'row', alignItems: 'center', gap: 6 },
+    totalLabel: { fontSize: 12, fontWeight: '700', color: c.ink },
+    totalNum: { fontSize: 12, fontWeight: '800' },
+
+    empty: { alignItems: 'center', paddingTop: 72, gap: 8 },
+    emptyTitle: { fontSize: 15, fontWeight: '800', color: c.muted },
+    emptyHint: { fontSize: 12.5, color: c.muted3, textAlign: 'center', lineHeight: 19 },
+    pressed: { opacity: 0.58 },
+
+    // day sheet
+    sheetFill: { flex: 1, justifyContent: 'flex-end' },
+    sheetScrim: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: c.scrim },
+    daySheet: {
+      backgroundColor: c.sheet,
+      borderTopLeftRadius: 28,
+      borderTopRightRadius: 28,
+      paddingHorizontal: 18,
+      paddingTop: 13,
+      gap: 13,
+      maxHeight: '74%',
+      // Gentle lift only — the scrim already separates the sheet from the
+      // calendar, so a heavy upward shadow just reads as a dark band above it.
+      shadowColor: c.ink,
+      shadowOffset: { width: 0, height: -3 },
+      shadowOpacity: 0.06,
+      shadowRadius: 14,
+      elevation: 8,
+    },
+    grabber: { width: 38, height: 4, borderRadius: 999, backgroundColor: c.divider, alignSelf: 'center' },
+    dayHead: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
+    dayHeadText: { gap: 2 },
+    dayTitle: { fontSize: 19, fontWeight: '800', color: c.ink, lineHeight: 22 },
+    daySub: { fontSize: 11.5, fontWeight: '600', color: c.muted3 },
+    busyPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      backgroundColor: c.accentSoft,
+      borderRadius: 999,
+      paddingHorizontal: 11,
+      paddingVertical: 5,
+    },
+    busyDot: { width: 6, height: 6, borderRadius: 999, backgroundColor: c.accent },
+    busyText: { fontSize: 11, fontWeight: '800', color: c.accentInk },
+    dayList: { gap: 9, paddingBottom: 4 },
+    dayRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 11,
+      backgroundColor: c.card,
+      borderRadius: 14,
+      paddingHorizontal: 13,
+      paddingVertical: 11,
+      shadowColor: c.ink,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.04,
+      shadowRadius: 8,
+      elevation: 1,
+    },
+    dayTime: { fontSize: 11, fontWeight: '700', color: c.gold, width: 40 },
+    dayDot: { width: 8, height: 8, borderRadius: 999 },
+    dayRowTitle: { flex: 1, fontSize: 13.5, fontWeight: '700', color: c.ink },
+    dayRowTag: { fontSize: 10.5, fontWeight: '800' },
+  });

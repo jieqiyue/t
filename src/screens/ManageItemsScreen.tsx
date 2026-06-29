@@ -11,6 +11,7 @@ interface Props {
   tags: ActivityTag[];
   onChangeItems: (items: ActivityItem[]) => void;
   onDeleteItem: (item: ActivityItem) => void;
+  onRenameItem: (item: ActivityItem, newTitle: string) => void;
   onOpenStats: (title: string) => void;
   onBack: () => void;
 }
@@ -20,6 +21,7 @@ export default function ManageItemsScreen({
   tags,
   onChangeItems,
   onDeleteItem,
+  onRenameItem,
   onOpenStats,
   onBack,
 }: Props) {
@@ -31,6 +33,8 @@ export default function ManageItemsScreen({
   const [query, setQuery] = useState('');
   const [pendingArchive, setPendingArchive] = useState<ActivityItem | null>(null);
   const [pendingDelete, setPendingDelete] = useState<ActivityItem | null>(null);
+  const [editingId, setEditingId] = useState<ActivityItem['id'] | null>(null);
+  const [editingTitle, setEditingTitle] = useState('');
   const selectedTag = tags.find((tag) => tag.id === tagId) || null;
   const canAddItem = !!title.trim();
   const sortedActiveItems = useMemo(
@@ -73,6 +77,21 @@ export default function ManageItemsScreen({
 
   const togglePin = (item: ActivityItem) => {
     updateItem({ ...item, pinned: !item.pinned });
+  };
+
+  const startEdit = (item: ActivityItem) => {
+    setEditingId(item.id);
+    setEditingTitle(item.title);
+  };
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditingTitle('');
+  };
+  const saveEdit = (item: ActivityItem) => {
+    const trimmed = editingTitle.trim();
+    if (trimmed && trimmed !== item.title) onRenameItem(item, trimmed);
+    setEditingId(null);
+    setEditingTitle('');
   };
 
   const toggleArchive = (item: ActivityItem) => {
@@ -174,6 +193,27 @@ export default function ManageItemsScreen({
             </View>
           ) : visibleItems.map((item) => {
             const tag = tags.find((candidate) => candidate.id === item.tagId) || null;
+            if (editingId === item.id) {
+              return (
+                <View key={item.id} style={styles.itemRow}>
+                  <View style={[styles.dot, { backgroundColor: tag?.dot || c.muted3 }]} />
+                  <TextInput
+                    style={styles.editInput}
+                    value={editingTitle}
+                    onChangeText={setEditingTitle}
+                    autoFocus
+                    maxLength={40}
+                    onSubmitEditing={() => saveEdit(item)}
+                  />
+                  <Pressable onPress={() => saveEdit(item)} style={styles.smallButton}>
+                    <Text style={styles.saveButtonText}>保存</Text>
+                  </Pressable>
+                  <Pressable onPress={cancelEdit} style={styles.smallButton}>
+                    <Text style={styles.smallButtonText}>取消</Text>
+                  </Pressable>
+                </View>
+              );
+            }
             return (
               <View key={item.id} style={styles.itemRow}>
                 <Pressable
@@ -194,7 +234,9 @@ export default function ManageItemsScreen({
                       {tag?.label || UNTAGGED_LABEL}{item.archived ? ' · 已归档' : ''}
                     </Text>
                   </View>
-                  <Text style={styles.statHint}>统计 ›</Text>
+                </Pressable>
+                <Pressable onPress={() => startEdit(item)} style={styles.smallButton}>
+                  <Text style={styles.smallButtonText}>编辑</Text>
                 </Pressable>
                 {!item.archived && (
                   <Pressable
@@ -312,7 +354,17 @@ const createStyles = (c: Palette) => StyleSheet.create({
   },
   itemMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 9 },
   itemPressed: { opacity: 0.55 },
-  statHint: { fontSize: 10, fontWeight: '800', color: c.accent, marginLeft: 2 },
+  editInput: {
+    flex: 1,
+    backgroundColor: c.inputBg,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    color: c.ink,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  saveButtonText: { fontSize: 11, fontWeight: '800', color: c.accentInk },
   itemText: { flex: 1, minWidth: 0, gap: 3 },
   itemTitleLine: { flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 0 },
   pinBadge: {

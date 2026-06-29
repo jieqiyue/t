@@ -174,21 +174,33 @@ export function useTheme(): Palette {
   return useContext(ThemeContext);
 }
 
-/** Heatmap cell colour for an occurrence count, using the active palette. */
-export function heatColor(c: Palette, count: number): string {
-  if (count <= 0) return c.heatEmpty;
-  const alpha = count >= 5 ? 1 : [0, 0.28, 0.48, 0.68, 0.86][count];
-  return `rgba(${c.heatRGB},${alpha})`;
+/** "#A8B5A2" → "168,181,162" (for building rgba heatmap colours from a tag). */
+export function hexToRgb(hex: string): string {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `${r},${g},${b}`;
 }
 
-/** Heatmap legend swatches (light → dark) for the active palette. */
-export function heatLegend(c: Palette): string[] {
+/**
+ * Heatmap cell colour for an occurrence count. Defaults to the palette's green;
+ * pass `rgb` (e.g. from a tag colour) to tint the heatmap when filtering.
+ */
+export function heatColor(c: Palette, count: number, rgb: string = c.heatRGB): string {
+  if (count <= 0) return c.heatEmpty;
+  const alpha = count >= 5 ? 1 : [0, 0.28, 0.48, 0.68, 0.86][count];
+  return `rgba(${rgb},${alpha})`;
+}
+
+/** Heatmap legend swatches (light → dark), optionally tinted by `rgb`. */
+export function heatLegend(c: Palette, rgb: string = c.heatRGB): string[] {
   return [
     c.heatEmpty,
-    `rgba(${c.heatRGB},0.28)`,
-    `rgba(${c.heatRGB},0.48)`,
-    `rgba(${c.heatRGB},0.68)`,
-    `rgba(${c.heatRGB},1)`,
+    `rgba(${rgb},0.28)`,
+    `rgba(${rgb},0.48)`,
+    `rgba(${rgb},0.68)`,
+    `rgba(${rgb},1)`,
   ];
 }
 

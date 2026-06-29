@@ -96,6 +96,22 @@ export function WeatherIcon({ id, color, size = 15 }: { id: WeatherId; color?: s
   );
 }
 
+/** Funnel glyph for the filter entry. `filled` tints it when a filter is active. */
+export function FilterIcon({ color = '#FFFFFF', size = 15, filled = false }: { color?: string; size?: number; filled?: boolean }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M4 5h16l-6 7v6l-4 2v-8L4 5z"
+        stroke={color}
+        strokeWidth={1.7}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill={filled ? color : 'none'}
+      />
+    </Svg>
+  );
+}
+
 /** Magnifier glyph for the search entry. */
 export function SearchIcon({ color = '#FFFFFF', size = 18 }: { color?: string; size?: number }) {
   return (

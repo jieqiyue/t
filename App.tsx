@@ -4,7 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import TimelineScreen from './src/screens/TimelineScreen';
 import StatsScreen from './src/screens/StatsScreen';
-import AllActivitiesScreen from './src/screens/AllActivitiesScreen';
+import AllActivitiesScreen, { ActivityFilter } from './src/screens/AllActivitiesScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import ManageItemsScreen from './src/screens/ManageItemsScreen';
 import ManageTagsScreen from './src/screens/ManageTagsScreen';
@@ -69,8 +69,15 @@ type Route =
   | { name: 'summary' }
   | { name: 'export' }
   | { name: 'search' }
-  | { name: 'detail'; id: string; from?: 'timeline' | 'search' }
+  | { name: 'detail'; id: string; from?: 'timeline' | 'search' | 'activities' }
   | { name: 'stats'; title: string; from: 'timeline' | 'activities' | 'manageItems' };
+
+/** Where the detail screen returns to, based on where it was opened from. */
+function detailReturn(from?: 'timeline' | 'search' | 'activities'): Route {
+  if (from === 'search') return { name: 'search' };
+  if (from === 'activities') return { name: 'activities' };
+  return { name: 'timeline' };
+}
 
 export default function App() {
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -84,6 +91,25 @@ export default function App() {
   const [justRecorded, setJustRecorded] = useState<Activity | null>(null);
   const [themeId, setThemeId] = useState<ThemeId>('cream');
   const theme = THEMES[themeId];
+
+  // 全部活动 view state — kept here so it survives navigating into a record's
+  // detail and back (the open day re-opens on return). Reset on a fresh open.
+  const [actTab, setActTab] = useState<'calendar' | 'rank' | 'cloud'>('calendar');
+  const [actView, setActView] = useState(() => {
+    const d = new Date();
+    return { y: d.getFullYear(), m: d.getMonth() };
+  });
+  const [actDay, setActDay] = useState<number | null>(null);
+  const [actFilter, setActFilter] = useState<ActivityFilter>({ type: 'all' });
+
+  const openAllActivities = useCallback(() => {
+    const d = new Date();
+    setActTab('calendar');
+    setActView({ y: d.getFullYear(), m: d.getMonth() });
+    setActDay(null);
+    setActFilter({ type: 'all' });
+    setRoute({ name: 'activities' });
+  }, []);
 
   useEffect(() => {
     Promise.all([loadActivities(), loadActivityOverviewStyle(), loadTags(), loadThemeId()]).then(
@@ -129,7 +155,7 @@ export default function App() {
         return true;
       }
       if (route.name === 'detail') {
-        setRoute(route.from === 'search' ? { name: 'search' } : { name: 'timeline' });
+        setRoute(detailReturn(route.from));
         return true;
       }
       if (route.name !== 'timeline') {
@@ -204,6 +230,22 @@ export default function App() {
     );
   }, []);
 
+  // Rename an item AND re-title every record it produced (same matching rule as
+  // deleteItem: by itemId, or title+tag for legacy records without an itemId).
+  const renameItem = useCallback((item: ActivityItem, newTitle: string) => {
+    const title = newTitle.trim();
+    if (!title) return;
+    setItems((prev) => prev.map((it) => (it.id === item.id ? { ...it, title } : it)));
+    setActivities((prev) =>
+      prev.map((a) =>
+        a.itemId === item.id ||
+        (!a.itemId && a.title === item.title && activityTagKey(a) === item.tagId)
+          ? { ...a, title }
+          : a,
+      ),
+    );
+  }, []);
+
   const restoreData = useCallback((data: RestoredData) => {
     setActivities(data.activities);
     setItems(data.items);
@@ -229,7 +271,7 @@ export default function App() {
   // If the record being viewed disappears (deleted / restored), leave the detail screen.
   useEffect(() => {
     if (route.name === 'detail' && !activities.find((a) => a.id === route.id)) {
-      setRoute(route.from === 'search' ? { name: 'search' } : { name: 'timeline' });
+      setRoute(detailReturn(route.from));
     }
   }, [route, activities]);
 
@@ -260,7 +302,7 @@ export default function App() {
           activities={activities}
           tags={tags}
           onOpenDetail={(id) => setRoute({ name: 'detail', id })}
-          onOpenAllActivities={() => setRoute({ name: 'activities' })}
+          onOpenAllActivities={openAllActivities}
           onOpenSettings={() => {
             setSettingsFrom('timeline');
             setRoute({ name: 'settings', from: 'timeline' });
@@ -273,7 +315,14 @@ export default function App() {
         <AllActivitiesScreen
           activities={activities}
           tags={tags}
-          overviewStyle={overviewStyle}
+          tab={actTab}
+          onChangeTab={setActTab}
+          view={actView}
+          onChangeView={setActView}
+          selectedDay={actDay}
+          onSelectDay={setActDay}
+          filter={actFilter}
+          onChangeFilter={setActFilter}
           onBack={() => setRoute({ name: 'timeline' })}
           onOpenSettings={() => {
             setSettingsFrom('activities');
@@ -281,6 +330,7 @@ export default function App() {
           }}
           onOpenStats={(title) => setRoute({ name: 'stats', title, from: 'activities' })}
           onOpenSearch={() => setRoute({ name: 'search' })}
+          onOpenDetail={(id) => setRoute({ name: 'detail', id, from: 'activities' })}
         />
       ) : route.name === 'settings' ? (
         <SettingsScreen
@@ -311,6 +361,7 @@ export default function App() {
           tags={tags}
           onChangeItems={setItems}
           onDeleteItem={deleteItem}
+          onRenameItem={renameItem}
           onOpenStats={(title) => setRoute({ name: 'stats', title, from: 'manageItems' })}
           onBack={() => setRoute({ name: 'settings', from: settingsFrom })}
         />
@@ -354,17 +405,13 @@ export default function App() {
             onUpdate={updateActivity}
             onDuplicate={duplicateActivity}
             onDelete={(id) => {
-              const backToSearch = route.name === 'detail' && route.from === 'search';
+              const back = route.name === 'detail' ? detailReturn(route.from) : { name: 'timeline' as const };
               deleteActivity(id);
-              setRoute(backToSearch ? { name: 'search' } : { name: 'timeline' });
+              setRoute(back);
             }}
             onOpenStats={(title) => setRoute({ name: 'stats', title, from: 'timeline' })}
             onBack={() =>
-              setRoute(
-                route.name === 'detail' && route.from === 'search'
-                  ? { name: 'search' }
-                  : { name: 'timeline' },
-              )
+              setRoute(route.name === 'detail' ? detailReturn(route.from) : { name: 'timeline' })
             }
           />
         ) : null

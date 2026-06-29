@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Palette, useTheme } from '../theme';
-import { dayKey, daysInMonth, mondayFirstIndex } from '../dateUtils';
+import { calendarWeeks, dayKey } from '../dateUtils';
 
 const WEEK = ['一', '二', '三', '四', '五', '六', '日'];
 
@@ -11,18 +11,6 @@ interface Props {
   value: Date;
   onSelect: (date: Date) => void;
   onClose: () => void;
-}
-
-function buildWeeks(year: number, month: number): (number | null)[][] {
-  const lead = mondayFirstIndex(new Date(year, month, 1).getDay());
-  const total = daysInMonth(year, month);
-  const arr: (number | null)[] = [];
-  for (let i = 0; i < lead; i++) arr.push(null);
-  for (let d = 1; d <= total; d++) arr.push(d);
-  while (arr.length % 7 !== 0) arr.push(null);
-  const weeks: (number | null)[][] = [];
-  for (let i = 0; i < arr.length; i += 7) weeks.push(arr.slice(i, i + 7));
-  return weeks;
 }
 
 export default function DatePickerSheet({ visible, value, onSelect, onClose }: Props) {
@@ -37,7 +25,7 @@ export default function DatePickerSheet({ visible, value, onSelect, onClose }: P
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
-  const weeks = useMemo(() => buildWeeks(view.y, view.m), [view]);
+  const weeks = useMemo(() => calendarWeeks(view.y, view.m), [view]);
   const selectedKey = dayKey(value);
   const todayKey = dayKey(new Date());
 
