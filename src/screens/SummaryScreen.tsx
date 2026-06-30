@@ -8,12 +8,16 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { captureRef } from 'react-native-view-shot';
+import Svg, { Circle, G } from 'react-native-svg';
 import * as Sharing from 'expo-sharing';
 import { Palette, useTheme } from '../theme';
 import { Activity, ActivityTag } from '../types';
-import { buildSummary, SummaryPeriod } from '../summary';
+import { buildAnnual, buildSummary, SummaryPeriod } from '../summary';
 import { MOOD_DIST_COLOR, MOOD_MAP, ShareIcon, StarIcon } from '../components/moodWeather';
-import { resolveOptionalTag } from '../tagUtils';
+import { resolveOptionalTag, untaggedView } from '../tagUtils';
+import { useToday } from '../useToday';
+
+type ViewPeriod = SummaryPeriod | 'year';
 
 interface Props {
   activities: Activity[];
@@ -25,11 +29,18 @@ export default function SummaryScreen({ activities, tags, onBack }: Props) {
   const insets = useSafeAreaInsets();
   const c = useTheme();
   const styles = useMemo(() => createStyles(c), [c]);
-  const [period, setPeriod] = useState<SummaryPeriod>('week');
+  const now = useToday();
+  const [period, setPeriod] = useState<ViewPeriod>('week');
   const cardRef = useRef<View>(null);
 
-  const summary = useMemo(() => buildSummary(activities, period, new Date()), [activities, period]);
+  const summary = useMemo(
+    () => buildSummary(activities, period === 'year' ? 'month' : period, now),
+    [activities, period, now],
+  );
+  const annual = useMemo(() => buildAnnual(activities, now.getFullYear()), [activities, now]);
   const topMax = summary.top[0]?.count || 1;
+  const sliceTag = (key: string) =>
+    key === 'untagged' ? untaggedView(c) : resolveOptionalTag(c, tags, key);
 
   const onShare = async () => {
     try {
@@ -49,23 +60,26 @@ export default function SummaryScreen({ activities, tags, onBack }: Props) {
           <Text style={styles.backIcon}>‹</Text>
         </Pressable>
         <Text style={styles.title}>小结</Text>
-        <Pressable onPress={onShare} style={styles.roundBtn} hitSlop={10}>
-          <ShareIcon color={c.muted} size={15} />
-        </Pressable>
+        {period === 'year' ? (
+          <Text style={styles.yearLabel}>{annual.year}</Text>
+        ) : (
+          <Pressable onPress={onShare} style={styles.roundBtn} hitSlop={10}>
+            <ShareIcon color={c.muted} size={15} />
+          </Pressable>
+        )}
       </View>
 
       <View style={styles.segmented}>
-        {(['week', 'month'] as SummaryPeriod[]).map((p) => {
+        {(['week', 'month', 'year'] as ViewPeriod[]).map((p) => {
           const active = period === p;
+          const label = p === 'week' ? '周' : p === 'month' ? '月' : '年';
           return (
             <Pressable
               key={p}
               onPress={() => setPeriod(p)}
               style={active ? styles.segmentActive : styles.segment}
             >
-              <Text style={active ? styles.segmentActiveText : styles.segmentText}>
-                {p === 'week' ? '本周' : '本月'}
-              </Text>
+              <Text style={active ? styles.segmentActiveText : styles.segmentText}>{label}</Text>
             </Pressable>
           );
         })}
@@ -75,6 +89,70 @@ export default function SummaryScreen({ activities, tags, onBack }: Props) {
         contentContainerStyle={[styles.scroll, { paddingBottom: 110 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
       >
+        {period === 'year' ? (
+          <>
+            <View style={styles.annualCard}>
+              <View style={styles.annualHead}>
+                <Text style={styles.blockLabel}>{annual.year} 年记录热度</Text>
+                <Text style={styles.annualTotal}>共 {annual.total} 次</Text>
+              </View>
+              <View style={styles.monthGrid}>
+                {annual.monthCounts.map((cnt, i) => {
+                  const future = now.getFullYear() === annual.year && i > now.getMonth();
+                  const current = now.getFullYear() === annual.year && i === now.getMonth();
+                  const alpha = 0.25 + 0.75 * (cnt / annual.maxMonth);
+                  return (
+                    <View
+                      key={i}
+                      style={[
+                        styles.monthCell,
+                        { backgroundColor: future ? c.heatEmpty : `rgba(${c.heatRGB},${alpha})` },
+                        current && styles.monthCellCurrent,
+                      ]}
+                    >
+                      <Text style={[styles.monthName, future && styles.monthFuture]}>{i + 1}月</Text>
+                      <Text style={[styles.monthCount, future && styles.monthFuture]}>
+                        {future ? '—' : cnt}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View style={styles.annualCard}>
+              <Text style={styles.blockLabel}>标签维度</Text>
+              {annual.total === 0 ? (
+                <Text style={styles.emptyText}>这一年还没有记录。</Text>
+              ) : (
+                <View style={styles.donutRow}>
+                  <DonutChart
+                    slices={annual.tags.map((t) => ({ color: sliceTag(t.key).dot, value: t.count }))}
+                    total={annual.total}
+                    track={c.border}
+                    numColor={c.ink}
+                    labelColor={c.muted3}
+                  />
+                  <View style={styles.donutLegend}>
+                    {annual.tags.map((t) => {
+                      const tv = sliceTag(t.key);
+                      const pct = Math.round((t.count / annual.total) * 100);
+                      return (
+                        <View key={t.key} style={styles.donutLegendRow}>
+                          <View style={[styles.legendDot, { backgroundColor: tv.dot }]} />
+                          <Text style={styles.donutLegendLabel} numberOfLines={1}>
+                            {tv.label}
+                          </Text>
+                          <Text style={[styles.donutLegendPct, { color: tv.text }]}>{pct}%</Text>
+                        </View>
+                      );
+                    })}
+                  </View>
+                </View>
+              )}
+            </View>
+          </>
+        ) : (
         <View ref={cardRef} collapsable={false} style={styles.card}>
           <View style={styles.cardHead}>
             <View style={styles.cardHeadText}>
@@ -179,22 +257,86 @@ export default function SummaryScreen({ activities, tags, onBack }: Props) {
             <Text style={styles.messageText}>{summary.message}</Text>
           </View>
         </View>
+        )}
       </ScrollView>
 
-      <Pressable
-        onPress={onShare}
-        style={({ pressed }) => [
-          styles.shareBtn,
-          { bottom: 24 + insets.bottom },
-          pressed && styles.sharePressed,
-        ]}
-      >
-        <ShareIcon color="#FFFFFF" size={16} />
-        <Text style={styles.shareText}>分享这张卡片</Text>
-      </Pressable>
+      {period !== 'year' && (
+        <Pressable
+          onPress={onShare}
+          style={({ pressed }) => [
+            styles.shareBtn,
+            { bottom: 24 + insets.bottom },
+            pressed && styles.sharePressed,
+          ]}
+        >
+          <ShareIcon color="#FFFFFF" size={16} />
+          <Text style={styles.shareText}>分享这张卡片</Text>
+        </Pressable>
+      )}
     </View>
   );
 }
+
+function DonutChart({
+  slices,
+  total,
+  track,
+  numColor,
+  labelColor,
+}: {
+  slices: { color: string; value: number }[];
+  total: number;
+  track: string;
+  numColor: string;
+  labelColor: string;
+}) {
+  const size = 118;
+  const ring = 16;
+  const r = (size - ring) / 2;
+  const C = 2 * Math.PI * r;
+  let acc = 0;
+  return (
+    <View style={{ width: size, height: size }}>
+      <Svg width={size} height={size}>
+        <G transform={`rotate(-90 ${size / 2} ${size / 2})`}>
+          <Circle cx={size / 2} cy={size / 2} r={r} stroke={track} strokeWidth={ring} fill="none" />
+          {slices.map((s, i) => {
+            const frac = total > 0 ? s.value / total : 0;
+            const seg = (
+              <Circle
+                key={i}
+                cx={size / 2}
+                cy={size / 2}
+                r={r}
+                stroke={s.color}
+                strokeWidth={ring}
+                fill="none"
+                strokeDasharray={`${frac * C} ${C}`}
+                strokeDashoffset={-acc * C}
+              />
+            );
+            acc += frac;
+            return seg;
+          })}
+        </G>
+      </Svg>
+      <View style={styles_donutCenter}>
+        <Text style={{ fontSize: 24, fontWeight: '800', color: numColor }}>{total}</Text>
+        <Text style={{ fontSize: 10, fontWeight: '700', color: labelColor }}>总次数</Text>
+      </View>
+    </View>
+  );
+}
+
+const styles_donutCenter = {
+  position: 'absolute' as const,
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  alignItems: 'center' as const,
+  justifyContent: 'center' as const,
+};
 
 const createStyles = (c: Palette) => StyleSheet.create({
   root: { flex: 1, backgroundColor: c.bgAlt, paddingHorizontal: 20 },
@@ -214,6 +356,41 @@ const createStyles = (c: Palette) => StyleSheet.create({
   },
   backIcon: { fontSize: 20, color: c.muted, marginTop: -2 },
   title: { flex: 1, fontSize: 22, fontWeight: '800', color: c.ink },
+  yearLabel: { fontSize: 16, fontWeight: '800', color: c.ink },
+  annualCard: {
+    backgroundColor: c.card,
+    borderRadius: 18,
+    padding: 16,
+    gap: 12,
+    shadowColor: c.ink,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 2,
+    marginBottom: 14,
+  },
+  annualHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  annualTotal: { fontSize: 11, fontWeight: '800', color: c.gold },
+  monthGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 8 },
+  monthCell: {
+    width: '23%',
+    aspectRatio: 1,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  monthCellCurrent: { borderColor: c.ink },
+  monthName: { fontSize: 10, fontWeight: '700', color: c.heatDaySoft },
+  monthCount: { fontSize: 13, fontWeight: '800', color: c.heatDayStrong },
+  monthFuture: { color: c.muted3 },
+  donutRow: { flexDirection: 'row', alignItems: 'center', gap: 18 },
+  donutLegend: { flex: 1, gap: 9 },
+  donutLegendRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  donutLegendLabel: { flex: 1, fontSize: 13, fontWeight: '700', color: c.ink },
+  donutLegendPct: { fontSize: 13, fontWeight: '800' },
   segmented: {
     flexDirection: 'row',
     backgroundColor: c.border,

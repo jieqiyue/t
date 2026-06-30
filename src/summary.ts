@@ -113,6 +113,38 @@ export function buildSummary(activities: Activity[], period: SummaryPeriod, now:
   return summary;
 }
 
+export interface AnnualTagSlice {
+  key: string; // tag id, or 'untagged'
+  count: number;
+}
+
+export interface AnnualSummary {
+  year: number;
+  monthCounts: number[]; // length 12
+  total: number;
+  maxMonth: number;
+  tags: AnnualTagSlice[]; // sorted by count desc
+}
+
+/** Per-month counts + tag distribution for a calendar year. */
+export function buildAnnual(activities: Activity[], year: number): AnnualSummary {
+  const monthCounts = new Array(12).fill(0);
+  const tagMap = new Map<string, number>();
+  let total = 0;
+  for (const a of activities) {
+    const d = new Date(a.timestamp);
+    if (d.getFullYear() !== year) continue;
+    monthCounts[d.getMonth()] += 1;
+    total += 1;
+    const key = activityTagKey(a) ?? 'untagged';
+    tagMap.set(key, (tagMap.get(key) || 0) + 1);
+  }
+  const tags = [...tagMap.entries()]
+    .map(([key, count]) => ({ key, count }))
+    .sort((a, b) => b.count - a.count);
+  return { year, monthCounts, total, maxMonth: Math.max(1, ...monthCounts), tags };
+}
+
 function buildMessage(s: PeriodSummary): string {
   const word = s.period === 'week' ? '这周' : '这个月';
   if (s.totalCount === 0) {

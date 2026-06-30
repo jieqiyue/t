@@ -96,6 +96,18 @@ export function WeatherIcon({ id, color, size = 15 }: { id: WeatherId; color?: s
   );
 }
 
+/** Flame glyph for the streak card. */
+export function FlameIcon({ color = '#FFFFFF', size = 20 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 2.5s-1 3-3 5.5C7 10.5 4.5 12 4.5 15.5a7.5 7.5 0 0 0 15 0c0-4-3-6-4.5-9.5 0 2.2-1.3 3.4-2.3 3.4-1.2 0-1.7-1.4-.7-2.9-.9.4-2 1.6-2 3.4 0 0-1.5-3 2-7.4z"
+        fill={color}
+      />
+    </Svg>
+  );
+}
+
 /** Location pin glyph. */
 export function PinIcon({ color = '#FFFFFF', size = 15 }: { color?: string; size?: number }) {
   return (
