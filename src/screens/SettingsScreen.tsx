@@ -1,17 +1,26 @@
 import React, { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Palette, THEME_LIST, ThemeId, useTheme } from '../theme';
 import { ActivityOverviewStyle } from '../types';
 import ConfirmDialog from '../components/ConfirmDialog';
+import WheelPicker from '../components/WheelPicker';
+import { ReminderConfig } from '../reminder';
+
+const HOURS = Array.from({ length: 24 }, (_, i) => i);
+const MINUTES = Array.from({ length: 60 }, (_, i) => i);
+const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
 
 interface Props {
   overviewStyle: ActivityOverviewStyle;
   onChangeOverviewStyle: (style: ActivityOverviewStyle) => void;
   themeId: ThemeId;
   onChangeTheme: (id: ThemeId) => void;
+  reminder: ReminderConfig;
+  onChangeReminder: (next: ReminderConfig) => void | Promise<void>;
   onOpenManageItems: () => void;
   onOpenManageTags: () => void;
+  onOpenBatchTag: () => void;
   onOpenExport: () => void;
   onClearAllData: () => void;
   onBack: () => void;
@@ -27,8 +36,11 @@ export default function SettingsScreen({
   onChangeOverviewStyle,
   themeId,
   onChangeTheme,
+  reminder,
+  onChangeReminder,
   onOpenManageItems,
   onOpenManageTags,
+  onOpenBatchTag,
   onOpenExport,
   onClearAllData,
   onBack,
@@ -37,6 +49,23 @@ export default function SettingsScreen({
   const c = useTheme();
   const styles = useMemo(() => createStyles(c), [c]);
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
+  const [timeOpen, setTimeOpen] = useState(false);
+  const [draftHour, setDraftHour] = useState(reminder.hour);
+  const [draftMinute, setDraftMinute] = useState(reminder.minute);
+  const isWeb = Platform.OS === 'web';
+
+  const openTimePicker = () => {
+    setDraftHour(reminder.hour);
+    setDraftMinute(reminder.minute);
+    setTimeOpen(true);
+  };
+  const saveTime = () => {
+    setTimeOpen(false);
+    onChangeReminder({ ...reminder, hour: draftHour, minute: draftMinute });
+  };
+  const toggleReminder = () => {
+    onChangeReminder({ ...reminder, enabled: !reminder.enabled });
+  };
 
   const confirmClear = () => {
     setConfirmClearOpen(false);
@@ -75,13 +104,58 @@ export default function SettingsScreen({
             </View>
             <Text style={styles.navArrow}>›</Text>
           </Pressable>
-          <Pressable onPress={onOpenManageTags} style={[styles.navOption, styles.optionLast]}>
+          <Pressable onPress={onOpenManageTags} style={styles.navOption}>
             <View style={styles.optionText}>
               <Text style={styles.optionTitle}>标签管理</Text>
               <Text style={styles.optionDesc}>维护事件所属的标签和显示颜色。</Text>
             </View>
             <Text style={styles.navArrow}>›</Text>
           </Pressable>
+          <Pressable onPress={onOpenBatchTag} style={[styles.navOption, styles.optionLast]}>
+            <View style={styles.optionText}>
+              <Text style={styles.optionTitle}>批量设置标签</Text>
+              <Text style={styles.optionDesc}>为没有标签的历史记录批量关联标签。</Text>
+            </View>
+            <Text style={styles.navArrow}>›</Text>
+          </Pressable>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>提醒</Text>
+        <View style={styles.optionCard}>
+          <View style={[styles.navOption, !reminder.enabled && styles.optionLast]}>
+            <View style={styles.optionText}>
+              <Text style={styles.optionTitle}>每日提醒</Text>
+              <Text style={styles.optionDesc}>
+                {isWeb
+                  ? '提醒只在手机端生效，网页预览不会发送通知。'
+                  : '到点提醒你来记录今天，关掉后随时可重新打开。'}
+              </Text>
+            </View>
+            <Pressable
+              onPress={toggleReminder}
+              disabled={isWeb}
+              style={[
+                styles.switchTrack,
+                reminder.enabled && styles.switchTrackOn,
+                isWeb && styles.disabled,
+              ]}
+              hitSlop={6}
+            >
+              <View style={[styles.switchThumb, reminder.enabled && styles.switchThumbOn]} />
+            </Pressable>
+          </View>
+          {reminder.enabled && (
+            <Pressable onPress={openTimePicker} style={[styles.navOption, styles.optionLast]}>
+              <View style={styles.optionText}>
+                <Text style={styles.optionTitle}>提醒时间</Text>
+                <Text style={styles.optionDesc}>每天到点弹出通知。</Text>
+              </View>
+              <Text style={styles.timeValue}>{pad(reminder.hour)}:{pad(reminder.minute)}</Text>
+              <Text style={styles.navArrow}>›</Text>
+            </Pressable>
+          )}
         </View>
       </View>
 
@@ -183,6 +257,25 @@ export default function SettingsScreen({
           onCancel={() => setConfirmClearOpen(false)}
         />
       )}
+
+      <Modal visible={timeOpen} transparent animationType="slide" onRequestClose={() => setTimeOpen(false)}>
+        <View style={styles.pickerFill}>
+          <Pressable style={styles.pickerScrim} onPress={() => setTimeOpen(false)} />
+          <View style={[styles.pickerSheet, { paddingBottom: insets.bottom + 16 }]}>
+            <View style={styles.pickerHeader}>
+              <Text style={styles.pickerTitle}>提醒时间</Text>
+              <Pressable onPress={saveTime} hitSlop={10}>
+                <Text style={styles.pickerDone}>完成</Text>
+              </Pressable>
+            </View>
+            <View style={styles.wheelRow}>
+              <WheelPicker values={HOURS} value={draftHour} onChange={setDraftHour} format={pad} />
+              <Text style={styles.wheelColon}>:</Text>
+              <WheelPicker values={MINUTES} value={draftMinute} onChange={setDraftMinute} format={pad} />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -296,4 +389,43 @@ const createStyles = (c: Palette) => StyleSheet.create({
   currentDesc: { fontSize: 12, fontWeight: '600', color: c.muted3 },
   currentDots: { flexDirection: 'row', gap: 6 },
   currentDot: { width: 12, height: 12, borderRadius: 999 },
+
+  switchTrack: {
+    width: 44,
+    height: 26,
+    borderRadius: 999,
+    backgroundColor: c.inputBg,
+    padding: 3,
+    justifyContent: 'center',
+  },
+  switchTrackOn: { backgroundColor: c.accent },
+  switchThumb: {
+    width: 20,
+    height: 20,
+    borderRadius: 999,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  switchThumbOn: { transform: [{ translateX: 18 }] },
+  disabled: { opacity: 0.45 },
+  timeValue: { fontSize: 14, fontWeight: '800', color: c.ink, letterSpacing: 0.5 },
+
+  pickerFill: { flex: 1, justifyContent: 'flex-end' },
+  pickerScrim: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: c.scrim },
+  pickerSheet: {
+    backgroundColor: c.card,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    paddingHorizontal: 20,
+    paddingTop: 18,
+  },
+  pickerHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  pickerTitle: { fontSize: 16, fontWeight: '800', color: c.ink },
+  pickerDone: { fontSize: 13, fontWeight: '800', color: c.accentInk, letterSpacing: 0.5 },
+  wheelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 14, marginTop: 12 },
+  wheelColon: { fontSize: 22, fontWeight: '800', color: c.muted, marginTop: -2 },
 });

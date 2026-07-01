@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   Animated,
   Easing,
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -18,6 +19,7 @@ import { Palette, useTheme } from '../theme';
 import { ActivityItem, ActivityLocation, ActivityTag, MoodId, NewRecordInput, WeatherId } from '../types';
 import { timeLabel } from '../dateUtils';
 import { captureLocation, locationErrorMessage, locationLabel } from '../location';
+import { deletePhotoFile, pickPhotoFromLibrary, takePhotoWithCamera } from '../photoUtils';
 import { MOODS, MoodFace, PinIcon, WEATHERS, WeatherIcon } from './moodWeather';
 
 interface Props {
@@ -41,6 +43,9 @@ export default function QuickRecordSheet({ visible, items, tags, onClose, onSubm
   const [location, setLocation] = useState<ActivityLocation | null>(null);
   const [locating, setLocating] = useState(false);
   const [locError, setLocError] = useState<string | null>(null);
+  const [photo, setPhoto] = useState<string | null>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoOpen, setPhotoOpen] = useState(false);
   const [adding, setAdding] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newTagId, setNewTagId] = useState<ActivityTag['id'] | null>(null);
@@ -51,7 +56,7 @@ export default function QuickRecordSheet({ visible, items, tags, onClose, onSubm
     return items
       .filter((item) => !item.archived)
       .filter((item) => !keyword || item.title.toLowerCase().includes(keyword))
-      .sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned) || b.createdAt - a.createdAt);
+      .sort((a, b) => (a.sortOrder ?? a.createdAt) - (b.sortOrder ?? b.createdAt));
   }, [items, query]);
 
   useEffect(() => {
@@ -64,6 +69,9 @@ export default function QuickRecordSheet({ visible, items, tags, onClose, onSubm
       setLocation(null);
       setLocating(false);
       setLocError(null);
+      setPhoto(null);
+      setPhotoBusy(false);
+      setPhotoOpen(false);
       setAdding(false);
       setNewTitle('');
       setNewTagId(null);
@@ -94,6 +102,7 @@ export default function QuickRecordSheet({ visible, items, tags, onClose, onSubm
       mood: mood ?? undefined,
       weather: weather ?? undefined,
       location: location ?? undefined,
+      photo: photo ?? undefined,
     });
   };
 
@@ -104,6 +113,24 @@ export default function QuickRecordSheet({ visible, items, tags, onClose, onSubm
     setLocating(false);
     if (r.ok) setLocation(r.location);
     else setLocError(locationErrorMessage(r.reason));
+  };
+
+  const attachFromLibrary = async () => {
+    setPhotoBusy(true);
+    const uri = await pickPhotoFromLibrary();
+    setPhotoBusy(false);
+    if (uri) setPhoto(uri);
+  };
+  const attachFromCamera = async () => {
+    setPhotoBusy(true);
+    const uri = await takePhotoWithCamera();
+    setPhotoBusy(false);
+    if (uri) setPhoto(uri);
+  };
+  const removePhoto = () => {
+    const uri = photo;
+    setPhoto(null);
+    if (uri) deletePhotoFile(uri);
   };
 
   const confirmAdd = () => {
@@ -344,6 +371,38 @@ export default function QuickRecordSheet({ visible, items, tags, onClose, onSubm
                   )}
                   {!!locError && <Text style={styles.locErr}>{locError}</Text>}
                 </View>
+
+                {/* Photo (optional) */}
+                <View style={styles.section}>
+                  <Text style={styles.sectionLabel}>照片（可选）</Text>
+                  {photo ? (
+                    <View style={styles.photoPreview}>
+                      <Pressable onPress={() => setPhotoOpen(true)} style={styles.photoImgPress}>
+                        <Image source={{ uri: photo }} style={styles.photoImg} resizeMode="cover" />
+                      </Pressable>
+                      <Pressable onPress={removePhoto} hitSlop={8} style={styles.photoClear}>
+                        <Text style={styles.photoClearText}>×</Text>
+                      </Pressable>
+                    </View>
+                  ) : (
+                    <View style={styles.photoRow}>
+                      <Pressable
+                        onPress={attachFromLibrary}
+                        disabled={photoBusy}
+                        style={[styles.photoBtn, photoBusy && styles.locBtnBusy]}
+                      >
+                        <Text style={styles.locBtnText}>从相册</Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={attachFromCamera}
+                        disabled={photoBusy}
+                        style={[styles.photoBtn, photoBusy && styles.locBtnBusy]}
+                      >
+                        <Text style={styles.locBtnText}>拍一张</Text>
+                      </Pressable>
+                    </View>
+                  )}
+                </View>
             </ScrollView>
 
             <Pressable
@@ -360,6 +419,19 @@ export default function QuickRecordSheet({ visible, items, tags, onClose, onSubm
           </Animated.View>
         </KeyboardAvoidingView>
       </View>
+
+      <Modal
+        visible={photoOpen && !!photo}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPhotoOpen(false)}
+      >
+        <Pressable style={styles.photoFullBg} onPress={() => setPhotoOpen(false)}>
+          {!!photo && (
+            <Image source={{ uri: photo }} style={styles.photoFullImg} resizeMode="contain" />
+          )}
+        </Pressable>
+      </Modal>
     </Modal>
   );
 }
@@ -510,6 +582,43 @@ const createStyles = (c: Palette) => StyleSheet.create({
   },
   locClearText: { fontSize: 13, color: c.accentInk, marginTop: -1 },
   locErr: { fontSize: 11.5, fontWeight: '600', color: '#B07B6F', paddingLeft: 2 },
+  photoRow: { flexDirection: 'row', gap: 8 },
+  photoBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: c.card,
+    borderWidth: 1.5,
+    borderColor: c.border,
+    borderRadius: 12,
+    paddingVertical: 11,
+  },
+  photoPreview: {
+    width: 92,
+    height: 92,
+    borderRadius: 14,
+    overflow: 'hidden',
+    backgroundColor: c.inputBg,
+    position: 'relative',
+  },
+  photoImgPress: { width: '100%', height: '100%' },
+  photoImg: { width: '100%', height: '100%' },
+  photoFullBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', alignItems: 'center', justifyContent: 'center' },
+  photoFullImg: { width: '100%', height: '100%' },
+  photoClear: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 22,
+    height: 22,
+    borderRadius: 999,
+    backgroundColor: 'rgba(20,20,20,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoClearText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800', marginTop: -2 },
   empty: { backgroundColor: c.inputBg, borderRadius: 16, padding: 16, gap: 6, marginBottom: 4 },
   emptyTitle: { fontSize: 14, fontWeight: '800', color: c.ink },
   emptyHint: { fontSize: 12, color: c.muted3, lineHeight: 18 },

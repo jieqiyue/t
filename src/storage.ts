@@ -2,12 +2,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DEFAULT_TAGS, ThemeId } from './theme';
 import { Activity, ActivityItem, ActivityOverviewStyle, ActivityTag } from './types';
 import { activityTagKey } from './tagUtils';
+import { REMINDER_STORAGE_KEY } from './reminder';
 
 const KEY = 'dal.activities.v1';
 const OVERVIEW_STYLE_KEY = 'dal.activityOverviewStyle.v1';
 const TAGS_KEY = 'dal.tags.v1';
 const ITEMS_KEY = 'dal.activityItems.v1';
 const THEME_KEY = 'dal.theme.v1';
+export const SEARCH_KEYWORDS_KEY = 'dal.search.recentKeywords.v1';
+export const SEARCH_FILTERS_KEY = 'dal.search.recentFilters.v1';
 
 export async function loadThemeId(): Promise<ThemeId> {
   try {
@@ -90,7 +93,16 @@ export async function saveActivityOverviewStyle(style: ActivityOverviewStyle): P
 }
 
 export async function clearAllData(): Promise<void> {
-  await AsyncStorage.multiRemove([KEY, OVERVIEW_STYLE_KEY, TAGS_KEY, ITEMS_KEY, THEME_KEY]);
+  await AsyncStorage.multiRemove([
+    KEY,
+    OVERVIEW_STYLE_KEY,
+    TAGS_KEY,
+    ITEMS_KEY,
+    THEME_KEY,
+    REMINDER_STORAGE_KEY,
+    SEARCH_KEYWORDS_KEY,
+    SEARCH_FILTERS_KEY,
+  ]);
 }
 
 function buildItemsFromActivities(activities: Activity[]): ActivityItem[] {

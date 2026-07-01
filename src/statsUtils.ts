@@ -92,7 +92,7 @@ function dailyBuckets(timestamps: number[], n: number, endIdx: number): number[]
 }
 
 /** Trend series for the period, plus % change vs the previous equal window.
- *  week → last 7 days, month → last 14 days, year → last 12 months. */
+ *  week → last 7 days, month → last 30 days, year → last 12 months. */
 export function trend(timestamps: number[], period: StatPeriod, now: Date): Trend {
   if (period === 'year') {
     const baseY = now.getFullYear();
@@ -115,7 +115,7 @@ export function trend(timestamps: number[], period: StatPeriod, now: Date): Tren
     };
   }
 
-  const n = period === 'week' ? 7 : 14;
+  const n = period === 'week' ? 7 : 30;
   const endIdx = dayIndex(now.getTime());
   const cur = dailyBuckets(timestamps, n, endIdx);
   const prev = dailyBuckets(timestamps, n, endIdx - n);

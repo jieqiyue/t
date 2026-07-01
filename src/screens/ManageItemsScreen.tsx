@@ -1,10 +1,26 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Palette, UNTAGGED_LABEL, useTheme } from '../theme';
 import { ActivityItem, ActivityTag } from '../types';
 import { newId } from '../ids';
 import ConfirmDialog from '../components/ConfirmDialog';
+import DraggableList from '../components/DraggableList';
+
+function Chevron({ dir, color, size = 11 }: { dir: 'up' | 'down'; color: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d={dir === 'up' ? 'M6 15l6-6 6 6' : 'M6 9l6 6 6-6'}
+        stroke={color}
+        strokeWidth={2.6}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
 
 interface Props {
   items: ActivityItem[];
@@ -35,12 +51,13 @@ export default function ManageItemsScreen({
   const [pendingDelete, setPendingDelete] = useState<ActivityItem | null>(null);
   const [editingId, setEditingId] = useState<ActivityItem['id'] | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
+  const [editingTagId, setEditingTagId] = useState<ActivityTag['id'] | null>(null);
   const selectedTag = tags.find((tag) => tag.id === tagId) || null;
   const canAddItem = !!title.trim();
   const sortedActiveItems = useMemo(
     () =>
       [...items.filter((item) => !item.archived)].sort(
-        (a, b) => Number(!!b.pinned) - Number(!!a.pinned) || b.createdAt - a.createdAt,
+        (a, b) => (a.sortOrder ?? a.createdAt) - (b.sortOrder ?? b.createdAt),
       ),
     [items],
   );
@@ -48,14 +65,23 @@ export default function ManageItemsScreen({
     () => [...items.filter((item) => item.archived)].sort((a, b) => b.createdAt - a.createdAt),
     [items],
   );
-  const visibleItems = useMemo(
+  const visibleActiveItems = useMemo(
     () => {
       const keyword = query.trim().toLowerCase();
-      return [...sortedActiveItems, ...sortedArchivedItems].filter(
+      return sortedActiveItems.filter(
         (item) => !keyword || item.title.toLowerCase().includes(keyword),
       );
     },
-    [query, sortedActiveItems, sortedArchivedItems],
+    [query, sortedActiveItems],
+  );
+  const visibleArchivedItems = useMemo(
+    () => {
+      const keyword = query.trim().toLowerCase();
+      return sortedArchivedItems.filter(
+        (item) => !keyword || item.title.toLowerCase().includes(keyword),
+      );
+    },
+    [query, sortedArchivedItems],
   );
 
   const addItem = () => {
@@ -71,6 +97,26 @@ export default function ManageItemsScreen({
     setTitle('');
   };
 
+  /** Helper: produce a new array by swapping item at `index` up/down by one position. */
+  const moveItemInList = (list: ActivityItem[], index: number, dir: 'up' | 'down'): ActivityItem[] => {
+    const next = [...list];
+    const target = dir === 'up' ? index - 1 : index + 1;
+    [next[index], next[target]] = [next[target], next[index]];
+    return next;
+  };
+
+  const reorderItems = (reordered: ActivityItem[]) => {
+    // Assign sortOrder based on new positions, only for the reordered subset.
+    const next = [...items];
+    reordered.forEach((item, i) => {
+      const idx = next.findIndex((it) => it.id === item.id);
+      if (idx >= 0) {
+        next[idx] = { ...next[idx], sortOrder: i };
+      }
+    });
+    onChangeItems(next);
+  };
+
   const updateItem = (next: ActivityItem) => {
     onChangeItems(items.map((item) => (item.id === next.id ? next : item)));
   };
@@ -82,16 +128,23 @@ export default function ManageItemsScreen({
   const startEdit = (item: ActivityItem) => {
     setEditingId(item.id);
     setEditingTitle(item.title);
+    setEditingTagId(item.tagId ?? null);
   };
   const cancelEdit = () => {
     setEditingId(null);
     setEditingTitle('');
+    setEditingTagId(null);
   };
   const saveEdit = (item: ActivityItem) => {
     const trimmed = editingTitle.trim();
-    if (trimmed && trimmed !== item.title) onRenameItem(item, trimmed);
+    if (!trimmed) { cancelEdit(); return; }
+    if (trimmed !== item.title) onRenameItem(item, trimmed);
+    if (editingTagId !== (item.tagId ?? null)) {
+      onChangeItems(items.map((it) => (it.id === item.id ? { ...it, tagId: editingTagId ?? undefined } : it)));
+    }
     setEditingId(null);
     setEditingTitle('');
+    setEditingTagId(null);
   };
 
   const toggleArchive = (item: ActivityItem) => {
@@ -187,79 +240,171 @@ export default function ManageItemsScreen({
         />
 
         <View style={styles.list}>
-          {visibleItems.length === 0 ? (
+          {(visibleActiveItems.length + visibleArchivedItems.length) === 0 ? (
             <View style={styles.emptyRow}>
               <Text style={styles.emptyText}>{query.trim() ? '没有匹配的事件' : '还没有事件'}</Text>
             </View>
-          ) : visibleItems.map((item) => {
-            const tag = tags.find((candidate) => candidate.id === item.tagId) || null;
-            if (editingId === item.id) {
-              return (
-                <View key={item.id} style={styles.itemRow}>
-                  <View style={[styles.dot, { backgroundColor: tag?.dot || c.muted3 }]} />
-                  <TextInput
-                    style={styles.editInput}
-                    value={editingTitle}
-                    onChangeText={setEditingTitle}
-                    autoFocus
-                    maxLength={40}
-                    onSubmitEditing={() => saveEdit(item)}
-                  />
-                  <Pressable onPress={() => saveEdit(item)} style={styles.smallButton}>
-                    <Text style={styles.saveButtonText}>保存</Text>
-                  </Pressable>
-                  <Pressable onPress={cancelEdit} style={styles.smallButton}>
-                    <Text style={styles.smallButtonText}>取消</Text>
-                  </Pressable>
-                </View>
-              );
-            }
-            return (
-              <View key={item.id} style={styles.itemRow}>
-                <Pressable
-                  onPress={() => onOpenStats(item.title)}
-                  style={({ pressed }) => [styles.itemMain, pressed && styles.itemPressed]}
-                >
-                  <View style={[styles.dot, { backgroundColor: tag?.dot || c.muted3 }]} />
-                  <View style={styles.itemText}>
-                    <View style={styles.itemTitleLine}>
-                      {item.pinned && !item.archived && (
-                        <Text style={styles.pinBadge}>置顶</Text>
-                      )}
-                      <Text style={[styles.itemTitle, item.archived && styles.archived]} numberOfLines={1}>
-                        {item.title}
-                      </Text>
-                    </View>
-                    <Text style={[styles.itemTag, { color: tag?.text || c.muted3 }]}>
-                      {tag?.label || UNTAGGED_LABEL}{item.archived ? ' · 已归档' : ''}
-                    </Text>
-                  </View>
-                </Pressable>
-                <Pressable onPress={() => startEdit(item)} style={styles.smallButton}>
-                  <Text style={styles.smallButtonText}>编辑</Text>
-                </Pressable>
-                {!item.archived && (
-                  <Pressable
-                    onPress={() => togglePin(item)}
-                    style={[styles.smallButton, item.pinned && styles.pinButtonActive]}
-                  >
-                    <Text style={item.pinned ? styles.pinButtonActiveText : styles.smallButtonText}>
-                      {item.pinned ? '取消置顶' : '置顶'}
-                    </Text>
-                  </Pressable>
-                )}
-                <Pressable
-                  onPress={() => toggleArchive(item)}
-                  style={styles.smallButton}
-                >
-                  <Text style={styles.smallButtonText}>{item.archived ? '恢复' : '归档'}</Text>
-                </Pressable>
-                <Pressable onPress={() => setPendingDelete(item)} style={styles.smallButton}>
-                  <Text style={styles.deleteText}>删除</Text>
-                </Pressable>
-              </View>
-            );
-          })}
+          ) : (
+            <>
+              {/* Active items — draggable */}
+              {visibleActiveItems.length > 0 && (
+                <DraggableList
+                  data={visibleActiveItems}
+                  onReorder={reorderItems}
+                  keyExtractor={(item) => item.id}
+                  renderItem={(item, index, canMoveUp, canMoveDown) => {
+                    const tag = tags.find((candidate) => candidate.id === item.tagId) || null;
+                    if (editingId === item.id) {
+                      const editTag = tags.find((t) => t.id === editingTagId) || null;
+                      return (
+                        <View style={styles.editBlock}>
+                          <View style={styles.editRow}>
+                            <View style={[styles.dot, { backgroundColor: editTag?.dot || c.muted3 }]} />
+                            <TextInput
+                              style={styles.editInput}
+                              value={editingTitle}
+                              onChangeText={setEditingTitle}
+                              autoFocus
+                              maxLength={40}
+                              onSubmitEditing={() => saveEdit(item)}
+                            />
+                            <Pressable onPress={() => saveEdit(item)} style={styles.smallButton}>
+                              <Text style={styles.saveButtonText}>保存</Text>
+                            </Pressable>
+                            <Pressable onPress={cancelEdit} style={styles.smallButton}>
+                              <Text style={styles.smallButtonText}>取消</Text>
+                            </Pressable>
+                          </View>
+                          <View style={styles.editTagRow}>
+                            <Pressable
+                              onPress={() => setEditingTagId(null)}
+                              style={[
+                                styles.editTagChip,
+                                editingTagId == null && { backgroundColor: c.accent, borderColor: c.accent },
+                              ]}
+                            >
+                              {editingTagId != null && <View style={[styles.dot, { backgroundColor: c.muted3 }]} />}
+                              <Text style={[styles.tagText, editingTagId == null && styles.tagTextActive]}>无标签</Text>
+                            </Pressable>
+                            {tags.map((t) => {
+                              const active = t.id === editingTagId;
+                              return (
+                                <Pressable
+                                  key={t.id}
+                                  onPress={() => setEditingTagId(t.id)}
+                                  style={[styles.editTagChip, active && { backgroundColor: t.dot, borderColor: t.dot }]}
+                                >
+                                  {!active && <View style={[styles.dot, { backgroundColor: t.dot }]} />}
+                                  <Text style={[styles.tagText, active && styles.tagTextActive]}>{t.label}</Text>
+                                </Pressable>
+                              );
+                            })}
+                          </View>
+                        </View>
+                      );
+                    }
+                    return (
+                      <View style={styles.itemRow}>
+                        <View style={styles.movePill}>
+                          <Pressable
+                            onPress={() => reorderItems(moveItemInList(visibleActiveItems, index, 'up'))}
+                            disabled={!canMoveUp}
+                            hitSlop={6}
+                            style={({ pressed }) => [
+                              styles.moveHalf,
+                              styles.moveHalfTop,
+                              pressed && canMoveUp && styles.moveHalfPressed,
+                            ]}
+                          >
+                            <Chevron dir="up" color={canMoveUp ? c.muted : c.muted3} />
+                          </Pressable>
+                          <View style={styles.moveDivider} />
+                          <Pressable
+                            onPress={() => reorderItems(moveItemInList(visibleActiveItems, index, 'down'))}
+                            disabled={!canMoveDown}
+                            hitSlop={6}
+                            style={({ pressed }) => [
+                              styles.moveHalf,
+                              styles.moveHalfBottom,
+                              pressed && canMoveDown && styles.moveHalfPressed,
+                            ]}
+                          >
+                            <Chevron dir="down" color={canMoveDown ? c.muted : c.muted3} />
+                          </Pressable>
+                        </View>
+                        <Pressable
+                          onPress={() => onOpenStats(item.title)}
+                          style={({ pressed }) => [styles.itemMain, pressed && styles.itemPressed]}
+                        >
+                          <View style={[styles.dot, { backgroundColor: tag?.dot || c.muted3 }]} />
+                          <View style={styles.itemText}>
+                            <View style={styles.itemTitleLine}>
+                              <Text style={[styles.itemTitle]} numberOfLines={1}>
+                                {item.title}
+                              </Text>
+                            </View>
+                            <Text style={[styles.itemTag, { color: tag?.text || c.muted3 }]}>
+                              {tag?.label || UNTAGGED_LABEL}
+                            </Text>
+                          </View>
+                        </Pressable>
+                        <Pressable onPress={() => startEdit(item)} style={styles.smallButton}>
+                          <Text style={styles.smallButtonText}>编辑</Text>
+                        </Pressable>
+                        <Pressable
+                          onPress={() => toggleArchive(item)}
+                          style={styles.smallButton}
+                        >
+                          <Text style={styles.smallButtonText}>归档</Text>
+                        </Pressable>
+                        <Pressable onPress={() => setPendingDelete(item)} style={styles.smallButton}>
+                          <Text style={styles.deleteText}>删除</Text>
+                        </Pressable>
+                      </View>
+                    );
+                  }}
+                />
+              )}
+
+              {/* Archived items — not draggable */}
+              {visibleArchivedItems.length > 0 && (
+                <>
+                  {visibleArchivedItems.map((item) => {
+                    const tag = tags.find((candidate) => candidate.id === item.tagId) || null;
+                    return (
+                      <View key={item.id} style={styles.itemRow}>
+                        <Pressable
+                          onPress={() => onOpenStats(item.title)}
+                          style={({ pressed }) => [styles.itemMain, pressed && styles.itemPressed]}
+                        >
+                          <View style={[styles.dot, { backgroundColor: tag?.dot || c.muted3 }]} />
+                          <View style={styles.itemText}>
+                            <View style={styles.itemTitleLine}>
+                              <Text style={[styles.itemTitle, styles.archived]} numberOfLines={1}>
+                                {item.title}
+                              </Text>
+                            </View>
+                            <Text style={[styles.itemTag, { color: tag?.text || c.muted3 }]}>
+                              {tag?.label || UNTAGGED_LABEL} · 已归档
+                            </Text>
+                          </View>
+                        </Pressable>
+                        <Pressable
+                          onPress={() => toggleArchive(item)}
+                          style={styles.smallButton}
+                        >
+                          <Text style={styles.smallButtonText}>恢复</Text>
+                        </Pressable>
+                        <Pressable onPress={() => setPendingDelete(item)} style={styles.smallButton}>
+                          <Text style={styles.deleteText}>删除</Text>
+                        </Pressable>
+                      </View>
+                    );
+                  })}
+                </>
+              )}
+            </>
+          )}
         </View>
       </ScrollView>
 
@@ -354,6 +499,34 @@ const createStyles = (c: Palette) => StyleSheet.create({
   },
   itemMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 9 },
   itemPressed: { opacity: 0.55 },
+  editBlock: {
+    paddingVertical: 13,
+    borderBottomWidth: 1,
+    borderBottomColor: c.inputBg,
+    gap: 10,
+  },
+  editRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+  },
+  editTagRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingLeft: 17,
+  },
+  editTagChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: c.card,
+    borderWidth: 1.5,
+    borderColor: c.border,
+    paddingHorizontal: 13,
+    paddingVertical: 7,
+    borderRadius: 999,
+  },
   editInput: {
     flex: 1,
     backgroundColor: c.inputBg,
@@ -382,7 +555,18 @@ const createStyles = (c: Palette) => StyleSheet.create({
   itemTag: { fontSize: 11, fontWeight: '800' },
   smallButton: { paddingHorizontal: 8, paddingVertical: 6, borderRadius: 999, backgroundColor: c.inputBg },
   smallButtonText: { fontSize: 11, fontWeight: '800', color: c.muted },
-  pinButtonActive: { backgroundColor: c.accentSoft },
-  pinButtonActiveText: { fontSize: 11, fontWeight: '800', color: c.accentInk },
+  itemRowDragging: { backgroundColor: c.card, borderRadius: 10, marginHorizontal: -4, paddingHorizontal: 18 },
+  dragHint: { fontSize: 16, fontWeight: '400', color: c.muted3, marginRight: 2 },
+  movePill: {
+    width: 26,
+    borderRadius: 13,
+    backgroundColor: c.inputBg,
+    overflow: 'hidden',
+  },
+  moveHalf: { height: 19, alignItems: 'center', justifyContent: 'center' },
+  moveHalfTop: { paddingTop: 1 },
+  moveHalfBottom: { paddingBottom: 1 },
+  moveHalfPressed: { backgroundColor: c.border },
+  moveDivider: { height: 1, backgroundColor: c.card, marginHorizontal: 5 },
   deleteText: { fontSize: 11, fontWeight: '800', color: '#9B6E64' },
 });

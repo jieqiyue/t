@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Palette, UNTAGGED_LABEL, useTheme } from '../theme';
 import {
@@ -13,6 +13,7 @@ import {
 } from '../types';
 import { resolveActivityTag, resolveOptionalTag } from '../tagUtils';
 import { captureLocation, locationErrorMessage, locationLabel } from '../location';
+import { deletePhotoFile, pickPhotoFromLibrary, takePhotoWithCamera } from '../photoUtils';
 import { MOOD_MAP, MOODS, MoodFace, PinIcon, WEATHER_MAP, WEATHERS, WeatherIcon } from '../components/moodWeather';
 import ConfirmDialog from '../components/ConfirmDialog';
 import WheelPicker from '../components/WheelPicker';
@@ -60,6 +61,9 @@ export default function RecordDetailScreen({
   const [location, setLocation] = useState<ActivityLocation | null>(activity.location ?? null);
   const [locating, setLocating] = useState(false);
   const [locError, setLocError] = useState<string | null>(null);
+  const [photo, setPhoto] = useState<string | null>(activity.photo ?? null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoOpen, setPhotoOpen] = useState(false);
   const [when, setWhen] = useState(() => new Date(activity.timestamp));
   const [selectedItemId, setSelectedItemId] = useState<string | null>(activity.itemId ?? null);
   const [selectedTagId, setSelectedTagId] = useState<ActivityTag['id'] | null>(activity.tagId ?? null);
@@ -86,6 +90,8 @@ export default function RecordDetailScreen({
     setLocation(activity.location ?? null);
     setLocating(false);
     setLocError(null);
+    setPhoto(activity.photo ?? null);
+    setPhotoBusy(false);
     setWhen(new Date(activity.timestamp));
     setSelectedItemId(activity.itemId ?? null);
     setSelectedTagId(activity.tagId ?? null);
@@ -101,6 +107,31 @@ export default function RecordDetailScreen({
     else setLocError(locationErrorMessage(r.reason));
   };
 
+  const attachFromLibrary = async () => {
+    setPhotoBusy(true);
+    const uri = await pickPhotoFromLibrary();
+    setPhotoBusy(false);
+    if (uri) {
+      // Discard any freshly-attached photo we're replacing (keep original activity.photo).
+      if (photo && photo !== activity.photo) deletePhotoFile(photo);
+      setPhoto(uri);
+    }
+  };
+  const attachFromCamera = async () => {
+    setPhotoBusy(true);
+    const uri = await takePhotoWithCamera();
+    setPhotoBusy(false);
+    if (uri) {
+      if (photo && photo !== activity.photo) deletePhotoFile(photo);
+      setPhoto(uri);
+    }
+  };
+  const removePhoto = () => {
+    // Only delete on save — until then user can cancel and keep the original.
+    if (photo && photo !== activity.photo) deletePhotoFile(photo);
+    setPhoto(null);
+  };
+
   const save = () => {
     const nextTitle = selectedItem?.title ?? activity.title;
     const nextItemId = selectedItem?.id ?? activity.itemId;
@@ -113,6 +144,8 @@ export default function RecordDetailScreen({
       ? matchedTag.id
       : 'life') as CategoryId;
 
+    // If the photo changed, dispose of the old file (best-effort).
+    if (activity.photo && activity.photo !== photo) deletePhotoFile(activity.photo);
     onUpdate({
       ...activity,
       itemId: nextItemId,
@@ -123,6 +156,7 @@ export default function RecordDetailScreen({
       mood: mood ?? undefined,
       weather: weather ?? undefined,
       location: location ?? undefined,
+      photo: photo ?? undefined,
       timestamp: when.getTime(),
     });
     setMode('view');
@@ -307,6 +341,37 @@ export default function RecordDetailScreen({
           </View>
 
           <View style={styles.section}>
+            <Text style={styles.label}>照片</Text>
+            {photo ? (
+              <View style={styles.photoPreview}>
+                <Pressable onPress={() => setPhotoOpen(true)} style={styles.photoImgPress}>
+                  <Image source={{ uri: photo }} style={styles.photoImg} resizeMode="cover" />
+                </Pressable>
+                <Pressable onPress={removePhoto} hitSlop={8} style={styles.photoClear}>
+                  <Text style={styles.photoClearText}>×</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <View style={styles.photoRow}>
+                <Pressable
+                  onPress={attachFromLibrary}
+                  disabled={photoBusy}
+                  style={({ pressed }) => [styles.locBtn, styles.flex1, (photoBusy || pressed) && styles.pressed]}
+                >
+                  <Text style={styles.locBtnText}>从相册</Text>
+                </Pressable>
+                <Pressable
+                  onPress={attachFromCamera}
+                  disabled={photoBusy}
+                  style={({ pressed }) => [styles.locBtn, styles.flex1, (photoBusy || pressed) && styles.pressed]}
+                >
+                  <Text style={styles.locBtnText}>拍一张</Text>
+                </Pressable>
+              </View>
+            )}
+          </View>
+
+          <View style={styles.section}>
             <Text style={styles.label}>时间</Text>
             <View style={styles.timeCard}>
               <Pressable
@@ -364,6 +429,14 @@ export default function RecordDetailScreen({
           onSelect={(d) => setWhen(d)}
           onClose={() => setDateOpen(false)}
         />
+
+        <Modal visible={photoOpen && !!photo} transparent animationType="fade" onRequestClose={() => setPhotoOpen(false)}>
+          <Pressable style={styles.photoFullBg} onPress={() => setPhotoOpen(false)}>
+            {!!photo && (
+              <Image source={{ uri: photo }} style={styles.photoFullImg} resizeMode="contain" />
+            )}
+          </Pressable>
+        </Modal>
       </View>
     );
   }
@@ -397,6 +470,12 @@ export default function RecordDetailScreen({
         </View>
 
         <Text style={styles.bigTitle}>{activity.title}</Text>
+
+        {!!activity.photo && (
+          <Pressable onPress={() => setPhotoOpen(true)} style={styles.photoCard}>
+            <Image source={{ uri: activity.photo }} style={styles.photoCardImg} resizeMode="cover" />
+          </Pressable>
+        )}
 
         {!!activity.note && (
           <View style={styles.noteCard}>
@@ -480,6 +559,14 @@ export default function RecordDetailScreen({
           onCancel={() => setPendingDuplicate(false)}
         />
       )}
+
+      <Modal visible={photoOpen && !!activity.photo} transparent animationType="fade" onRequestClose={() => setPhotoOpen(false)}>
+        <Pressable style={styles.photoFullBg} onPress={() => setPhotoOpen(false)}>
+          {!!activity.photo && (
+            <Image source={{ uri: activity.photo }} style={styles.photoFullImg} resizeMode="contain" />
+          )}
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -524,6 +611,46 @@ const createStyles = (c: Palette) => StyleSheet.create({
     elevation: 2,
   },
   noteText: { fontSize: 14, fontWeight: '500', color: c.muted, lineHeight: 23 },
+  photoCard: {
+    marginTop: 16,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: c.inputBg,
+    aspectRatio: 4 / 3,
+    shadowColor: c.ink,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 2,
+  },
+  photoCardImg: { width: '100%', height: '100%' },
+  photoFullBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', alignItems: 'center', justifyContent: 'center' },
+  photoFullImg: { width: '100%', height: '100%' },
+
+  photoRow: { flexDirection: 'row', gap: 8 },
+  photoPreview: {
+    width: 108,
+    height: 108,
+    borderRadius: 14,
+    overflow: 'hidden',
+    backgroundColor: c.inputBg,
+    position: 'relative',
+  },
+  photoImgPress: { width: '100%', height: '100%' },
+  photoImg: { width: '100%', height: '100%' },
+  photoClear: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 22,
+    height: 22,
+    borderRadius: 999,
+    backgroundColor: 'rgba(20,20,20,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoClearText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800', marginTop: -2 },
+  flex1: { flex: 1 },
   metaCard: {
     marginTop: 16,
     backgroundColor: c.card,

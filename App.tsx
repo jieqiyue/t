@@ -8,6 +8,7 @@ import AllActivitiesScreen, { ActivityFilter } from './src/screens/AllActivities
 import SettingsScreen from './src/screens/SettingsScreen';
 import ManageItemsScreen from './src/screens/ManageItemsScreen';
 import ManageTagsScreen from './src/screens/ManageTagsScreen';
+import BatchTagScreen from './src/screens/BatchTagScreen';
 import RecordDoneScreen from './src/screens/RecordDoneScreen';
 import SummaryScreen from './src/screens/SummaryScreen';
 import ExportScreen from './src/screens/ExportScreen';
@@ -40,6 +41,15 @@ import { THEMES, ThemeId, ThemeProvider } from './src/theme';
 import { isSameDay } from './src/dateUtils';
 import { newId } from './src/ids';
 import { activityTagKey } from './src/tagUtils';
+import {
+  applyReminderConfig,
+  DEFAULT_REMINDER,
+  initNotifications,
+  loadReminderConfig,
+  ReminderConfig,
+  saveReminderConfig,
+} from './src/reminder';
+import { cleanupOrphanPhotos, deletePhotoFile } from './src/photoUtils';
 
 /**
  * Persists `value` via `save` whenever it changes — but skips the first run
@@ -66,6 +76,7 @@ type Route =
   | { name: 'settings'; from: 'timeline' | 'activities' }
   | { name: 'manageItems' }
   | { name: 'manageTags' }
+  | { name: 'batchTag' }
   | { name: 'summary' }
   | { name: 'export' }
   | { name: 'search' }
@@ -79,6 +90,13 @@ function detailReturn(from?: 'timeline' | 'search' | 'activities'): Route {
   return { name: 'timeline' };
 }
 
+/** Whether the user already logged at least one record on `now`'s calendar day. */
+function hasRecordToday(activities: Activity[], now: Date): boolean {
+  const startMs = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const endMs = startMs + 86400000;
+  return activities.some((a) => a.timestamp >= startMs && a.timestamp < endMs);
+}
+
 export default function App() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,6 +108,7 @@ export default function App() {
   const [settingsFrom, setSettingsFrom] = useState<'timeline' | 'activities'>('timeline');
   const [justRecorded, setJustRecorded] = useState<Activity | null>(null);
   const [themeId, setThemeId] = useState<ThemeId>('cream');
+  const [reminder, setReminder] = useState<ReminderConfig>(DEFAULT_REMINDER);
   const theme = THEMES[themeId];
 
   // 全部活动 view state — kept here so it survives navigating into a record's
@@ -112,18 +131,42 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    Promise.all([loadActivities(), loadActivityOverviewStyle(), loadTags(), loadThemeId()]).then(
-      async ([list, style, tagList, tId]) => {
-        const itemList = await loadActivityItems(list);
-        setActivities(list);
-        setOverviewStyle(style);
-        setTags(tagList);
-        setItems(itemList);
-        setThemeId(tId);
-        setLoading(false);
-      },
-    );
+    initNotifications();
+    Promise.all([
+      loadActivities(),
+      loadActivityOverviewStyle(),
+      loadTags(),
+      loadThemeId(),
+      loadReminderConfig(),
+    ]).then(async ([list, style, tagList, tId, rem]) => {
+      const itemList = await loadActivityItems(list);
+      setActivities(list);
+      setOverviewStyle(style);
+      setTags(tagList);
+      setItems(itemList);
+      setThemeId(tId);
+      setReminder(rem);
+      setLoading(false);
+      // Re-apply scheduled reminder on every cold start (the OS may have
+      // dropped pending alarms on reboot, OEM cleanup, etc.). Skip today
+      // if the user already recorded before opening the app.
+      if (rem.enabled) applyReminderConfig(rem, hasRecordToday(list, new Date()));
+      // Sweep orphaned photo files (e.g. from records deleted while the app
+      // wasn't running, or attachments left over from earlier bugs).
+      cleanupOrphanPhotos(list);
+    });
   }, []);
+
+  // Reschedule the reminder whenever activities change, so today's fire is
+  // suppressed as soon as the user records (and re-enabled if they delete
+  // today's only record). Deliberately excludes `reminder` — that path is
+  // handled explicitly by handleChangeReminder to keep permission-prompt
+  // logic centralised.
+  useEffect(() => {
+    if (loading || !reminder.enabled) return;
+    applyReminderConfig(reminder, hasRecordToday(activities, new Date()));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activities, loading]);
 
   // Persist on change, skipping the redundant write right after hydration.
   usePersist(activities, !loading, saveActivities);
@@ -158,6 +201,10 @@ export default function App() {
         setRoute(detailReturn(route.from));
         return true;
       }
+      if (route.name === 'manageItems' || route.name === 'manageTags' || route.name === 'batchTag' || route.name === 'export') {
+        setRoute({ name: 'settings', from: settingsFrom });
+        return true;
+      }
       if (route.name !== 'timeline') {
         setRoute({ name: 'timeline' });
         return true;
@@ -182,6 +229,7 @@ export default function App() {
       mood: input.mood,
       weather: input.weather,
       location: input.location,
+      photo: input.photo,
       timestamp: Date.now(),
     };
     setActivities((prev) => [entry, ...prev]);
@@ -199,7 +247,11 @@ export default function App() {
 
   // Delete a single logged record from the timeline.
   const deleteActivity = useCallback((id: string) => {
-    setActivities((prev) => prev.filter((a) => a.id !== id));
+    setActivities((prev) => {
+      const gone = prev.find((a) => a.id === id);
+      if (gone?.photo) deletePhotoFile(gone.photo);
+      return prev.filter((a) => a.id !== id);
+    });
   }, []);
 
   // Edit a record's note / mood / weather / time.
@@ -247,6 +299,21 @@ export default function App() {
     );
   }, []);
 
+  // Batch-set tag for multiple untagged records.
+  const batchSetTag = useCallback((ids: string[], tagId: ActivityTag['id']) => {
+    const tag = tags.find((t) => t.id === tagId);
+    const category = (tag?.id === 'work' || tag?.id === 'life' || tag?.id === 'sport' || tag?.id === 'fun'
+      ? tag.id
+      : 'life') as CategoryId;
+    setActivities((prev) =>
+      prev.map((a) => {
+        if (!ids.includes(a.id)) return a;
+        // If the record has no tagId and no legacy category, set both.
+        return { ...a, tagId, category };
+      }),
+    );
+  }, [tags]);
+
   const restoreData = useCallback((data: RestoredData) => {
     setActivities(data.activities);
     setItems(data.items);
@@ -255,16 +322,27 @@ export default function App() {
   }, []);
 
   const handleClearAllData = useCallback(async () => {
+    // Delete every attached photo file before wiping metadata.
+    await Promise.all(activities.filter((a) => a.photo).map((a) => deletePhotoFile(a.photo)));
     await clearAllData();
     setActivities([]);
     setItems([]);
     setTags([]);
     setOverviewStyle('rank');
     setThemeId('cream');
+    setReminder(DEFAULT_REMINDER);
+    await applyReminderConfig(DEFAULT_REMINDER, false);
     setSheetOpen(false);
     setJustRecorded(null);
     setRoute({ name: 'timeline' });
-  }, []);
+  }, [activities]);
+
+  const handleChangeReminder = useCallback(async (next: ReminderConfig) => {
+    const effectiveEnabled = await applyReminderConfig(next, hasRecordToday(activities, new Date()));
+    const resolved: ReminderConfig = { ...next, enabled: effectiveEnabled };
+    setReminder(resolved);
+    await saveReminderConfig(resolved);
+  }, [activities]);
 
   const detailActivity =
     route.name === 'detail' ? activities.find((a) => a.id === route.id) ?? null : null;
@@ -339,6 +417,8 @@ export default function App() {
           onChangeOverviewStyle={setOverviewStyle}
           themeId={themeId}
           onChangeTheme={setThemeId}
+          reminder={reminder}
+          onChangeReminder={handleChangeReminder}
           onOpenManageItems={() => {
             setSettingsFrom(route.from);
             setRoute({ name: 'manageItems' });
@@ -346,6 +426,10 @@ export default function App() {
           onOpenManageTags={() => {
             setSettingsFrom(route.from);
             setRoute({ name: 'manageTags' });
+          }}
+          onOpenBatchTag={() => {
+            setSettingsFrom(route.from);
+            setRoute({ name: 'batchTag' });
           }}
           onOpenExport={() => {
             setSettingsFrom(route.from);
@@ -360,7 +444,27 @@ export default function App() {
         <ManageItemsScreen
           items={items}
           tags={tags}
-          onChangeItems={setItems}
+          onChangeItems={(nextItems) => {
+            // Detect tagId changes and propagate to related activities.
+            setActivities((prev) => {
+              const patched = prev.map((a) => {
+                // Only activities with an itemId can be reliably matched.
+                if (!a.itemId) return a;
+                const oldItem = items.find((it) => it.id === a.itemId);
+                const newItem = nextItems.find((it) => it.id === a.itemId);
+                if (!oldItem || !newItem) return a;
+                // tagId unchanged — nothing to do.
+                if ((oldItem.tagId ?? undefined) === (newItem.tagId ?? undefined)) return a;
+                const tag = tags.find((t) => t.id === newItem.tagId);
+                const category = (tag?.id === 'work' || tag?.id === 'life' || tag?.id === 'sport' || tag?.id === 'fun'
+                  ? tag.id
+                  : 'life') as CategoryId;
+                return { ...a, tagId: newItem.tagId ?? undefined, category };
+              });
+              return patched;
+            });
+            setItems(nextItems);
+          }}
           onDeleteItem={deleteItem}
           onRenameItem={renameItem}
           onOpenStats={(title) => setRoute({ name: 'stats', title, from: 'manageItems' })}
@@ -372,6 +476,13 @@ export default function App() {
           items={items}
           activities={activities}
           onChangeTags={setTags}
+          onBack={() => setRoute({ name: 'settings', from: settingsFrom })}
+        />
+      ) : route.name === 'batchTag' ? (
+        <BatchTagScreen
+          activities={activities}
+          tags={tags}
+          onBatchSetTag={batchSetTag}
           onBack={() => setRoute({ name: 'settings', from: settingsFrom })}
         />
       ) : route.name === 'summary' ? (

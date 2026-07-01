@@ -21,6 +21,8 @@ export interface ActivityItem {
   createdAt: number;
   pinned?: boolean;
   archived?: boolean;
+  /** Custom sort position (lower = higher in list). Absent = use createdAt fallback. */
+  sortOrder?: number;
 }
 
 /** A captured location: always coordinates, plus a human-readable label when
@@ -42,6 +44,9 @@ export interface Activity {
   mood?: MoodId;
   weather?: WeatherId;
   location?: ActivityLocation;
+  /** local file:// URI to an attached photo. Files live under
+   *  FileSystem.documentDirectory + "attachments/"; absent = no photo. */
+  photo?: string;
   /** epoch milliseconds for when the activity happened */
   timestamp: number;
 }
@@ -55,4 +60,5 @@ export interface NewRecordInput {
   mood?: MoodId;
   weather?: WeatherId;
   location?: ActivityLocation;
+  photo?: string;
 }

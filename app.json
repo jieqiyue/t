@@ -29,10 +29,18 @@
     },
     "plugins": [
       "expo-sharing",
+      "expo-notifications",
       [
         "expo-location",
         {
           "locationWhenInUsePermission": "用于在添加记录时标注你所在的位置（仅在你点击「记录位置」时获取，数据只保存在本机）。"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "用于在记录里附上一张照片（只保存在本机）。",
+          "cameraPermission": "用于给记录拍照附上（只保存在本机）。"
         }
       ]
     ]

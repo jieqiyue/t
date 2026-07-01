@@ -45,11 +45,23 @@ export async function captureLocation(): Promise<CaptureResult> {
       // hasServicesEnabledAsync may be unavailable on some platforms — ignore.
     }
 
+    // Fast path: a recent last-known fix (from any recent app / prior use)
+    // returns instantly and avoids waiting for a fresh GPS lock.
     let coords: { latitude: number; longitude: number } | null = null;
     try {
-      coords = await withTimeout(getCoords(), 16000);
+      const last = await Location.getLastKnownPositionAsync({ maxAge: 10 * 60 * 1000, requiredAccuracy: 500 });
+      if (last) coords = { latitude: last.coords.latitude, longitude: last.coords.longitude };
     } catch {
-      // no fix in time / provider error — handled by the null check below
+      // ignore — last-known unavailable on some platforms
+    }
+    if (!coords) {
+      try {
+        // Fresh fix: getCoords now uses coarse (network) accuracy with a 45s
+        // budget — indoor GPS cold-starts still get a chance.
+        coords = await withTimeout(getCoords(), 46000);
+      } catch {
+        // no fix in time / provider error — handled by the null check below
+      }
     }
     if (!coords) return { ok: false, reason: 'error' };
 
